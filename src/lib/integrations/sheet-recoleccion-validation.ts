@@ -27,6 +27,9 @@ export type RecoleccionSheetRow = {
   precio?: string | number;
   deuda?: string | number;
   recolector?: string;
+  /** Alias enviado por Apps Script */
+  recolector_email?: string;
+  turno?: RutaTurno;
 };
 
 export type FieldError = {
@@ -44,7 +47,7 @@ export type ValidatedRecoleccion = {
   barrio: string | null;
   direccion: string;
   depto: string | null;
-  telefono: string | null;
+  telefono: string;
   telefono_normalizado: string;
   observaciones: string | null;
   dia: string;
@@ -200,7 +203,7 @@ export function validateRecoleccionRow(
 
   const nombre = str(row.nombre);
   const direccion = str(row.direccion);
-  const recolector = str(row.recolector).toLowerCase();
+  const recolector = str(row.recolector ?? row.recolector_email).toLowerCase();
 
   if (!nombre) missing.push("Nombre");
   else checkLength("nombre", "Nombre", nombre, 150, errors);
@@ -245,7 +248,7 @@ export function validateRecoleccionRow(
   if (depto) checkLength("depto", "Depto", depto, 50, errors);
 
   const telefonoRaw = str(row.telefono);
-  let telefono: string | null = null;
+  let telefono = "";
   let telefono_normalizado = "";
   if (!telefonoRaw) {
     missing.push("Telefono");

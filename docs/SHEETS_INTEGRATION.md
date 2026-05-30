@@ -26,9 +26,11 @@ Fila 1 = encabezados exactos:
 Zona | Nombre | Unidad | Tipo de servicio | Frecuencia | Barrio | Direccion | Depto | Telefono* | Observaciones | Dia | Hora | Nota encargado | Precio | Deuda | Recolector | Estado | MensajeSistema
 ```
 
-### Obligatorios por fila
+### Obligatorios por fila (planilla y API)
 
-- Nombre, Direccion, Dia, Hora, Recolector, Telefono
+- **Nombre**, **Direccion**, **Telefono**, **Dia**, **Hora**, **Recolector**
+
+`Telefono` es obligatorio en ambos lados: la planilla no deja enviar la fila sin él y la API rechaza filas sin teléfono válido (formato argentino `+54...`, máx. 30 caracteres). Identifica al cliente dentro de la ruta.
 
 ### Enums
 

@@ -40,7 +40,7 @@ CREATE TABLE IF NOT EXISTS public.ruta_recolecciones (
   barrio TEXT,
   direccion TEXT NOT NULL,
   depto TEXT,
-  telefono TEXT,
+  telefono TEXT NOT NULL,
   telefono_normalizado TEXT NOT NULL,
   observaciones TEXT,
   dia DATE NOT NULL,
