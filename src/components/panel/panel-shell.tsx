@@ -20,7 +20,7 @@ export function PanelShell({ children, role, userName }: Props) {
   const links = [{ href: "/panel", label: "Inicio" }];
 
   if (isStaffRole(role)) {
-    links.push({ href: "/panel/rutas", label: "Rutas" });
+    links.push({ href: "/panel", label: "Operativo" });
   }
 
   if (canManageUsers({ role })) {
@@ -60,7 +60,7 @@ export function PanelShell({ children, role, userName }: Props) {
           </nav>
         </div>
       </header>
-      <main className="mx-auto max-w-6xl px-6 py-8">{children}</main>
+      <main className="mx-auto max-w-[1600px] px-4 py-8 sm:px-6">{children}</main>
     </div>
   );
 }

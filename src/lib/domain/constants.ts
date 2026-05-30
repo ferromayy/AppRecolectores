@@ -61,3 +61,25 @@ export const RUTA_ESTADO_LABELS: Record<RutaEstado, string> = {
   completada: "Completada",
   cancelada: "Cancelada",
 };
+
+/** Etiquetas para la vista operaria del panel */
+export const RUTA_ESTADO_OPERARIO_LABELS: Record<RutaEstado, string> = {
+  borrador: "Pendiente",
+  activa: "Pendiente",
+  en_curso: "En proceso",
+  completada: "Realizado",
+  cancelada: "Cancelada",
+};
+
+export const RUTA_TURNO_LABELS = {
+  manana: "Mañana",
+  tarde: "Tarde",
+} as const;
+
+export const RECOLECCION_OPERATIVA_LABELS = {
+  pendiente: "Pendiente",
+  en_camino: "En camino",
+  visitada: "Visitada",
+  omitida: "Omitida",
+  cancelada: "Cancelada",
+} as const;
