@@ -1,5 +1,7 @@
 import Link from "next/link";
+import { Suspense } from "react";
 
+import { InviteLinkHandler } from "@/components/auth/invite-link-handler";
 import { UpdatePasswordForm } from "@/components/auth/update-password-form";
 
 export default function ActualizarContrasenaPage() {
@@ -14,7 +16,13 @@ export default function ActualizarContrasenaPage() {
             Definí tu nueva contraseña para continuar usando la app.
           </p>
         </div>
+
+        <Suspense fallback={null}>
+          <InviteLinkHandler />
+        </Suspense>
+
         <UpdatePasswordForm />
+
         <p className="text-center text-xs text-zinc-500">
           <Link href="/login" className="underline">
             Volver al login

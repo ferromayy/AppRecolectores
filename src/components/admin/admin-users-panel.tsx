@@ -7,8 +7,13 @@ import {
   UsersTable,
   type AdminUserRow,
 } from "@/components/admin/users-table";
+import type { UserRole } from "@/lib/auth/constants";
 
-export function AdminUsersPanel() {
+type Props = {
+  creatableRoles: UserRole[];
+};
+
+export function AdminUsersPanel({ creatableRoles }: Props) {
   const [users, setUsers] = useState<AdminUserRow[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -34,7 +39,7 @@ export function AdminUsersPanel() {
 
   return (
     <div className="grid gap-8 lg:grid-cols-2">
-      <CreateUserForm onCreated={loadUsers} />
+      <CreateUserForm creatableRoles={creatableRoles} onCreated={loadUsers} />
       <div className="space-y-4">
         <h2 className="text-lg font-medium text-zinc-900 dark:text-zinc-50">
           Usuarios internos

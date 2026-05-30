@@ -1,48 +1,71 @@
 import Link from "next/link";
 
-import { logoutAction } from "@/app/login/actions";
-import { ROLE_LABELS } from "@/lib/auth/constants";
+import { canManageUsers } from "@/lib/auth/permissions";
 import { getSessionUser } from "@/lib/auth/session";
+import { isStaffRole } from "@/lib/domain/constants";
 
-export default async function PanelPage() {
-  const { user, profile } = await getSessionUser();
-
-  if (!user || !profile) {
-    return (
-      <div className="flex min-h-screen items-center justify-center p-6">
-        <Link href="/login" className="text-sm underline">
-          Iniciar sesión
-        </Link>
-      </div>
-    );
-  }
+export default async function PanelHomePage() {
+  const { profile } = await getSessionUser();
+  const staff = profile && isStaffRole(profile.role);
 
   return (
-    <div className="min-h-screen bg-zinc-50 px-6 py-12 dark:bg-zinc-950">
-      <div className="mx-auto max-w-lg space-y-6 rounded-xl border border-zinc-200 bg-white p-8 dark:border-zinc-800 dark:bg-zinc-900">
-        <div>
-          <p className="text-xs uppercase tracking-widest text-emerald-700">
-            Panel
-          </p>
-          <h1 className="text-2xl font-semibold">
-            Hola, {profile.full_name || user.email}
-          </h1>
-          <p className="mt-2 text-sm text-zinc-600">
-            Rol: {ROLE_LABELS[profile.role]}
-          </p>
-        </div>
-        <p className="text-sm text-zinc-500">
-          Próximamente: módulos según tu rol (recolecciones, asignaciones, etc.).
+    <div className="space-y-8">
+      <div>
+        <h1 className="text-2xl font-semibold text-zinc-900 dark:text-zinc-50">
+          Panel operativo
+        </h1>
+        <p className="mt-2 text-zinc-600 dark:text-zinc-400">
+          Bienvenido a App Recolectores.
         </p>
-        <form action={logoutAction}>
-          <button
-            type="submit"
-            className="text-sm text-zinc-600 underline hover:text-zinc-900"
-          >
-            Cerrar sesión
-          </button>
-        </form>
       </div>
+
+      {(staff || (profile && canManageUsers(profile))) && (
+        <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
+          {staff && (
+            <DashboardCard
+              title="Rutas"
+              description="Planillas importadas desde Google Sheets y seguimiento operativo."
+              href="/panel/rutas"
+            />
+          )}
+          {profile && canManageUsers(profile) && (
+            <DashboardCard
+              title="Usuarios"
+              description={
+                profile.role === "superadmin"
+                  ? "Crear admins y recolectores, y gestionar contraseñas."
+                  : "Crear recolectores y gestionar sus contraseñas."
+              }
+              href="/panel/usuarios"
+            />
+          )}
+        </div>
+      )}
     </div>
+  );
+}
+
+function DashboardCard({
+  title,
+  description,
+  href,
+}: {
+  title: string;
+  description: string;
+  href: string;
+}) {
+  return (
+    <Link
+      href={href}
+      className="block rounded-xl border border-zinc-200 bg-white p-6 transition-shadow hover:shadow-md dark:border-zinc-800 dark:bg-zinc-900"
+    >
+      <h2 className="font-medium text-zinc-900 dark:text-zinc-50">{title}</h2>
+      <p className="mt-2 text-sm text-zinc-600 dark:text-zinc-400">
+        {description}
+      </p>
+      <span className="mt-4 inline-block text-sm font-medium text-emerald-700">
+        Abrir →
+      </span>
+    </Link>
   );
 }

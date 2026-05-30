@@ -13,11 +13,26 @@ export async function GET(request: Request) {
     const { error } = await supabase.auth.exchangeCodeForSession(code);
 
     if (!error) {
-      if (type === "recovery" || next.includes("actualizar-contrasena")) {
-        return NextResponse.redirect(`${origin}/auth/actualizar-contrasena`);
-      }
-      return NextResponse.redirect(`${origin}${next}`);
+      const destination =
+        type === "recovery" || next.includes("actualizar-contrasena")
+          ? "/auth/actualizar-contrasena"
+          : next.startsWith("/")
+            ? next
+            : `/${next}`;
+      return NextResponse.redirect(`${origin}${destination}`);
     }
+
+    const expired =
+      error.message.toLowerCase().includes("expired") ||
+      error.message.toLowerCase().includes("invalid");
+    const errorKey = expired ? "link_expired" : "auth_callback";
+    return NextResponse.redirect(`${origin}/login?error=${errorKey}`);
+  }
+
+  const authError = searchParams.get("error");
+  const errorCode = searchParams.get("error_code");
+  if (authError || errorCode === "otp_expired") {
+    return NextResponse.redirect(`${origin}/login?error=link_expired`);
   }
 
   return NextResponse.redirect(`${origin}/login?error=auth_callback`);

@@ -1,23 +1,37 @@
 import { NextResponse } from "next/server";
 
-import { requireSuperadmin } from "@/lib/auth/session";
-import { getSiteUrl } from "@/lib/auth/site-url";
+import { setUserPassword } from "@/lib/auth/admin-users";
+import { validatePasswordPair } from "@/lib/auth/password";
+import { canResetPassword } from "@/lib/auth/permissions";
+import { requireUserManager } from "@/lib/auth/session";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { isSupabaseConfigured } from "@/lib/env";
 
 type RouteContext = { params: Promise<{ id: string }> };
 
-export async function POST(_request: Request, context: RouteContext) {
+export async function POST(request: Request, context: RouteContext) {
   if (!isSupabaseConfigured()) {
     return NextResponse.json({ error: "Supabase no configurado" }, { status: 503 });
   }
 
-  const auth = await requireSuperadmin();
+  const auth = await requireUserManager();
   if (!auth.ok) {
     return NextResponse.json({ error: auth.message }, { status: auth.status });
   }
 
   const { id } = await context.params;
+
+  let body: { password?: string; password_confirm?: string };
+  try {
+    body = await request.json();
+  } catch {
+    return NextResponse.json({ error: "JSON inválido" }, { status: 400 });
+  }
+
+  const passwordCheck = validatePasswordPair(body.password, body.password_confirm);
+  if (!passwordCheck.ok) {
+    return NextResponse.json({ error: passwordCheck.error }, { status: 400 });
+  }
 
   let admin;
   try {
@@ -29,7 +43,7 @@ export async function POST(_request: Request, context: RouteContext) {
 
   const { data: profile, error: profileError } = await admin
     .from("profiles")
-    .select("id, email, role")
+    .select("id, email, role, full_name")
     .eq("id", id)
     .maybeSingle();
 
@@ -41,33 +55,20 @@ export async function POST(_request: Request, context: RouteContext) {
     return NextResponse.json({ error: "Usuario no encontrado" }, { status: 404 });
   }
 
-  if (profile.role === "superadmin") {
+  if (!canResetPassword(auth.profile.role, profile.role)) {
     return NextResponse.json(
-      {
-        error:
-          "El superadmin (somos@ecolink.com.ar) gestiona su contraseña desde ese correo en Supabase / recuperación estándar.",
-      },
-      { status: 400 },
+      { error: "No tenés permiso para cambiar la contraseña de este usuario" },
+      { status: 403 },
     );
   }
 
-  if (profile.role !== "admin" && profile.role !== "recolector") {
-    return NextResponse.json({ error: "Rol no permitido" }, { status: 400 });
-  }
+  const updated = await setUserPassword(admin, id, passwordCheck.password);
 
-  const siteUrl = getSiteUrl();
-  const redirectTo = `${siteUrl}/auth/actualizar-contrasena`;
-
-  const { error: resetError } = await admin.auth.resetPasswordForEmail(
-    profile.email,
-    { redirectTo },
-  );
-
-  if (resetError) {
-    return NextResponse.json({ error: resetError.message }, { status: 400 });
+  if (updated.error) {
+    return NextResponse.json({ error: updated.error }, { status: 400 });
   }
 
   return NextResponse.json({
-    message: `Se envió un correo a ${profile.email} para restablecer la contraseña.`,
+    message: `Contraseña de ${profile.email} actualizada. Comunicásela al usuario por un canal seguro.`,
   });
 }

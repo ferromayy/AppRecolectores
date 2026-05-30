@@ -1,5 +1,7 @@
 import { createClient } from "@/lib/supabase/server";
-import { SUPERADMIN_EMAIL, type UserRole } from "@/lib/auth/constants";
+import { isStaffRole } from "@/lib/domain/constants";
+import { canManageUsers, isSuperadminUser } from "@/lib/auth/permissions";
+import type { UserRole } from "@/lib/auth/constants";
 
 export type Profile = {
   id: string;
@@ -34,6 +36,46 @@ export async function getSessionUser() {
   };
 }
 
+export async function requireAuth() {
+  const { user, profile } = await getSessionUser();
+
+  if (!user || !profile) {
+    return { ok: false as const, status: 401, message: "No autenticado" };
+  }
+
+  return { ok: true as const, user, profile };
+}
+
+export async function requireStaff() {
+  const auth = await requireAuth();
+  if (!auth.ok) return auth;
+
+  if (!isStaffRole(auth.profile.role)) {
+    return {
+      ok: false as const,
+      status: 403,
+      message: "Solo administradores pueden acceder",
+    };
+  }
+
+  return auth;
+}
+
+export async function requireUserManager() {
+  const auth = await requireAuth();
+  if (!auth.ok) return auth;
+
+  if (!canManageUsers(auth.profile)) {
+    return {
+      ok: false as const,
+      status: 403,
+      message: "No tenés permiso para gestionar usuarios",
+    };
+  }
+
+  return auth;
+}
+
 export async function requireSuperadmin() {
   const { user, profile } = await getSessionUser();
 
@@ -41,11 +83,7 @@ export async function requireSuperadmin() {
     return { ok: false as const, status: 401, message: "No autenticado" };
   }
 
-  const emailMatches =
-    user.email?.toLowerCase() === SUPERADMIN_EMAIL.toLowerCase();
-  const roleMatches = profile?.role === "superadmin";
-
-  if (!emailMatches || !roleMatches) {
+  if (!isSuperadminUser(profile, user.email)) {
     return {
       ok: false as const,
       status: 403,

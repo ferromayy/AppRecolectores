@@ -47,7 +47,7 @@ export async function loginAction(
     email === SUPERADMIN_EMAIL.toLowerCase() &&
     profile?.role === "superadmin"
   ) {
-    redirect("/admin/usuarios");
+    redirect("/panel");
   }
 
   if (profile?.role === "admin" || profile?.role === "recolector") {

@@ -1,20 +1,32 @@
 import Link from "next/link";
 
 import { LoginForm } from "@/components/auth/login-form";
+import { LoginHashHandler } from "@/app/login/login-extras";
 
 type LoginPageProps = {
-  searchParams: Promise<{ error?: string; next?: string }>;
+  searchParams: Promise<{ error?: string; next?: string; mensaje?: string }>;
 };
 
 const ERROR_MESSAGES: Record<string, string> = {
   sin_permiso: "No tenés permiso para acceder a esa sección.",
-  auth_callback: "No se pudo completar el inicio de sesión. Intentá de nuevo.",
+  auth_callback:
+    "No se pudo validar el enlace del correo. Pedile al superadmin un enlace nuevo.",
+  link_expired:
+    "El enlace del correo venció o ya se usó. Pedile al superadmin que reenvíe la invitación.",
+};
+
+const INFO_MESSAGES: Record<string, string> = {
+  contrasena_activada:
+    "Contraseña guardada. Ya podés iniciar sesión con tu correo y la nueva clave.",
 };
 
 export default async function LoginPage({ searchParams }: LoginPageProps) {
   const params = await searchParams;
   const bannerError = params.error
     ? ERROR_MESSAGES[params.error] ?? params.error
+    : undefined;
+  const bannerInfo = params.mensaje
+    ? INFO_MESSAGES[params.mensaje] ?? params.mensaje
     : undefined;
 
   return (
@@ -31,6 +43,14 @@ export default async function LoginPage({ searchParams }: LoginPageProps) {
             Acceso interno para superadmin, administradores y recolectores.
           </p>
         </div>
+
+        {bannerInfo && (
+          <p className="rounded-lg border border-emerald-200 bg-emerald-50 px-4 py-3 text-sm text-emerald-900 dark:border-emerald-900 dark:bg-emerald-950 dark:text-emerald-200">
+            {bannerInfo}
+          </p>
+        )}
+
+        <LoginHashHandler />
 
         {bannerError && (
           <p className="rounded-lg border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-800 dark:border-red-900 dark:bg-red-950 dark:text-red-200">

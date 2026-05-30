@@ -17,29 +17,95 @@ type Props = {
   onRefresh: () => void;
 };
 
-export function UsersTable({ users, onRefresh }: Props) {
-  const [loadingId, setLoadingId] = useState<string | null>(null);
-  const [feedback, setFeedback] = useState<string | null>(null);
+function ChangePasswordForm({
+  userId,
+  email,
+  onDone,
+  onCancel,
+}: {
+  userId: string;
+  email: string;
+  onDone: (message: string) => void;
+  onCancel: () => void;
+}) {
+  const [password, setPassword] = useState("");
+  const [passwordConfirm, setPasswordConfirm] = useState("");
   const [error, setError] = useState<string | null>(null);
+  const [loading, setLoading] = useState(false);
 
-  async function sendPasswordReset(userId: string) {
-    setLoadingId(userId);
-    setFeedback(null);
+  async function handleSubmit(e: React.FormEvent) {
+    e.preventDefault();
+    setLoading(true);
     setError(null);
 
     const res = await fetch(`/api/admin/users/${userId}/reset-password`, {
       method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        password,
+        password_confirm: passwordConfirm,
+      }),
     });
+
     const data = await res.json();
-    setLoadingId(null);
+    setLoading(false);
 
     if (!res.ok) {
-      setError(data.error ?? "No se pudo enviar el correo");
+      setError(data.error ?? "No se pudo cambiar la contraseña");
       return;
     }
 
-    setFeedback(data.message);
+    onDone(data.message);
   }
+
+  return (
+    <form onSubmit={handleSubmit} className="mt-2 space-y-2 rounded-lg border border-zinc-200 bg-zinc-50 p-3 dark:border-zinc-700 dark:bg-zinc-950">
+      <p className="text-xs text-zinc-600">
+        Nueva contraseña para <strong>{email}</strong>
+      </p>
+      <input
+        type="password"
+        required
+        minLength={8}
+        placeholder="Nueva contraseña"
+        value={password}
+        onChange={(e) => setPassword(e.target.value)}
+        className="w-full rounded border border-zinc-300 px-2 py-1.5 text-sm dark:border-zinc-700 dark:bg-zinc-900"
+      />
+      <input
+        type="password"
+        required
+        minLength={8}
+        placeholder="Confirmar contraseña"
+        value={passwordConfirm}
+        onChange={(e) => setPasswordConfirm(e.target.value)}
+        className="w-full rounded border border-zinc-300 px-2 py-1.5 text-sm dark:border-zinc-700 dark:bg-zinc-900"
+      />
+      {error && <p className="text-xs text-red-600">{error}</p>}
+      <div className="flex gap-2">
+        <button
+          type="submit"
+          disabled={loading}
+          className="rounded bg-emerald-700 px-3 py-1 text-xs font-medium text-white disabled:opacity-60"
+        >
+          {loading ? "Guardando…" : "Guardar contraseña"}
+        </button>
+        <button
+          type="button"
+          onClick={onCancel}
+          className="text-xs text-zinc-500 underline"
+        >
+          Cancelar
+        </button>
+      </div>
+    </form>
+  );
+}
+
+export function UsersTable({ users, onRefresh }: Props) {
+  const [editingId, setEditingId] = useState<string | null>(null);
+  const [feedback, setFeedback] = useState<string | null>(null);
+  const [error, setError] = useState<string | null>(null);
 
   if (users.length === 0) {
     return (
@@ -70,20 +136,34 @@ export function UsersTable({ users, onRefresh }: Props) {
                 key={user.id}
                 className="border-t border-zinc-200 dark:border-zinc-800"
               >
-                <td className="px-4 py-3">{user.full_name ?? "—"}</td>
-                <td className="px-4 py-3">{user.email}</td>
-                <td className="px-4 py-3">{ROLE_LABELS[user.role]}</td>
-                <td className="px-4 py-3">
-                  <button
-                    type="button"
-                    disabled={loadingId === user.id}
-                    onClick={() => sendPasswordReset(user.id)}
-                    className="text-sm font-medium text-emerald-700 hover:text-emerald-900 disabled:opacity-50 dark:text-emerald-400"
-                  >
-                    {loadingId === user.id
-                      ? "Enviando…"
-                      : "Enviar correo para cambiar contraseña"}
-                  </button>
+                <td className="px-4 py-3 align-top">{user.full_name ?? "—"}</td>
+                <td className="px-4 py-3 align-top">{user.email}</td>
+                <td className="px-4 py-3 align-top">{ROLE_LABELS[user.role]}</td>
+                <td className="px-4 py-3 align-top">
+                  {editingId === user.id ? (
+                    <ChangePasswordForm
+                      userId={user.id}
+                      email={user.email}
+                      onDone={(msg) => {
+                        setEditingId(null);
+                        setFeedback(msg);
+                        setError(null);
+                      }}
+                      onCancel={() => setEditingId(null)}
+                    />
+                  ) : (
+                    <button
+                      type="button"
+                      onClick={() => {
+                        setEditingId(user.id);
+                        setFeedback(null);
+                        setError(null);
+                      }}
+                      className="text-left text-sm font-medium text-emerald-700 hover:text-emerald-900 dark:text-emerald-400"
+                    >
+                      Cambiar contraseña
+                    </button>
+                  )}
                 </td>
               </tr>
             ))}

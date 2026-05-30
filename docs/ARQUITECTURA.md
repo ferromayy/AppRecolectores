@@ -57,9 +57,10 @@ Sistema interno para un **intermediario logístico** que conecta:
 - `GET /api/health` — la app responde.
 - `GET /api/db/status` — conectividad con Supabase.
 
-## Próximos pasos sugeridos
+## Módulos actuales
 
-1. Esquema inicial en `supabase/migrations` (actores, recolecciones, asignaciones).
-2. Auth con roles (`intermediario`, `cooperativa`, etc.).
-3. RLS alineado a cada rol.
-4. Pantallas por journey (solicitud → asignación → recolección → planta).
+- **Auth:** superadmin, admin, recolector (`profiles` + Supabase Auth).
+- **Organizaciones:** generadores, empresas, cooperativas.
+- **Recolecciones:** solicitud, asignación a recolector, estados en campo.
+
+Migración dominio: `supabase/migrations/20260520120000_domain_recolecciones.sql`

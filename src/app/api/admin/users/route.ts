@@ -1,30 +1,33 @@
 import { NextResponse } from "next/server";
 
-import { CREATABLE_ROLES, type UserRole } from "@/lib/auth/constants";
-import { requireSuperadmin } from "@/lib/auth/session";
-import { getSiteUrl } from "@/lib/auth/site-url";
+import { upsertAuthUserWithPassword } from "@/lib/auth/admin-users";
+import { validatePasswordPair } from "@/lib/auth/password";
+import type { UserRole } from "@/lib/auth/constants";
+import {
+  canCreateRole,
+  listableRolesFor,
+} from "@/lib/auth/permissions";
+import { requireUserManager } from "@/lib/auth/session";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { isSupabaseConfigured } from "@/lib/env";
-
-function isCreatableRole(value: string): value is (typeof CREATABLE_ROLES)[number] {
-  return (CREATABLE_ROLES as readonly string[]).includes(value);
-}
 
 export async function GET() {
   if (!isSupabaseConfigured()) {
     return NextResponse.json({ error: "Supabase no configurado" }, { status: 503 });
   }
 
-  const auth = await requireSuperadmin();
+  const auth = await requireUserManager();
   if (!auth.ok) {
     return NextResponse.json({ error: auth.message }, { status: auth.status });
   }
+
+  const roles = listableRolesFor(auth.profile.role);
 
   const admin = createAdminClient();
   const { data, error } = await admin
     .from("profiles")
     .select("id, email, role, full_name, created_at, updated_at")
-    .in("role", ["admin", "recolector"])
+    .in("role", roles)
     .order("created_at", { ascending: false });
 
   if (error) {
@@ -39,12 +42,19 @@ export async function POST(request: Request) {
     return NextResponse.json({ error: "Supabase no configurado" }, { status: 503 });
   }
 
-  const auth = await requireSuperadmin();
+  const auth = await requireUserManager();
   if (!auth.ok) {
     return NextResponse.json({ error: auth.message }, { status: auth.status });
   }
 
-  let body: { email?: string; full_name?: string; role?: string };
+  let body: {
+    email?: string;
+    full_name?: string;
+    role?: string;
+    password?: string;
+    password_confirm?: string;
+  };
+
   try {
     body = await request.json();
   } catch {
@@ -55,12 +65,22 @@ export async function POST(request: Request) {
   const fullName = body.full_name?.trim() || "";
   const role = body.role?.trim() as UserRole | undefined;
 
-  if (!email || !role || !isCreatableRole(role)) {
+  const passwordCheck = validatePasswordPair(body.password, body.password_confirm);
+  if (!passwordCheck.ok) {
+    return NextResponse.json({ error: passwordCheck.error }, { status: 400 });
+  }
+
+  if (!email || !role) {
     return NextResponse.json(
-      {
-        error: "Completá email y rol válido (admin o recolector)",
-      },
+      { error: "Completá email y rol válido" },
       { status: 400 },
+    );
+  }
+
+  if (!canCreateRole(auth.profile.role, role)) {
+    return NextResponse.json(
+      { error: "No tenés permiso para crear usuarios con ese rol" },
+      { status: 403 },
     );
   }
 
@@ -72,30 +92,23 @@ export async function POST(request: Request) {
     return NextResponse.json({ error: message }, { status: 503 });
   }
 
-  const siteUrl = getSiteUrl();
-  const redirectTo = `${siteUrl}/auth/confirmar`;
+  const created = await upsertAuthUserWithPassword(
+    admin,
+    email,
+    passwordCheck.password,
+    { full_name: fullName },
+  );
 
-  const { data: invited, error: inviteError } =
-    await admin.auth.admin.inviteUserByEmail(email, {
-      data: { full_name: fullName },
-      redirectTo,
-    });
-
-  if (inviteError) {
-    return NextResponse.json({ error: inviteError.message }, { status: 400 });
-  }
-
-  const userId = invited.user?.id;
-  if (!userId) {
+  if (created.error || !created.userId) {
     return NextResponse.json(
-      { error: "No se pudo crear el usuario en Auth" },
-      { status: 500 },
+      { error: created.error ?? "No se pudo crear el usuario" },
+      { status: 400 },
     );
   }
 
   const { error: profileError } = await admin.from("profiles").upsert(
     {
-      id: userId,
+      id: created.userId,
       email,
       role,
       full_name: fullName || null,
@@ -111,13 +124,14 @@ export async function POST(request: Request) {
   return NextResponse.json(
     {
       user: {
-        id: userId,
+        id: created.userId,
         email,
         role,
         full_name: fullName || null,
       },
-      message:
-        "Usuario creado. Se envió un correo de invitación para definir la contraseña.",
+      message: created.alreadyExisted
+        ? `Usuario actualizado. ${email} ya puede entrar con la contraseña que definiste.`
+        : `Usuario creado. ${email} puede entrar en /login con la contraseña que definiste.`,
     },
     { status: 201 },
   );

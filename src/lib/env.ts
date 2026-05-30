@@ -1,4 +1,8 @@
-const optionalServerEnv = ["SUPABASE_SERVICE_ROLE_KEY"] as const;
+const optionalServerEnv = [
+  "SUPABASE_SERVICE_ROLE_KEY",
+  "SUPABASE_SECRET_KEY",
+  "SHEETS_IMPORT_SECRET",
+] as const;
 
 export type ServerEnv = {
   supabaseUrl: string;
@@ -23,14 +27,26 @@ export function getSupabaseUrl(): string | undefined {
   return readEnv("NEXT_PUBLIC_SUPABASE_URL");
 }
 
+/** Clave secreta de servidor: service_role (legacy) o secret (dashboard nuevo). */
+export function getSupabaseSecretKey(): string | undefined {
+  const value =
+    readEnv("SUPABASE_SERVICE_ROLE_KEY") ?? readEnv("SUPABASE_SECRET_KEY");
+  if (!value || value === "tu_service_role_key") return undefined;
+  return value;
+}
+
 export function isSupabaseConfigured(): boolean {
   return Boolean(getSupabaseUrl() && getSupabasePublicKey());
+}
+
+export function isSupabaseAdminConfigured(): boolean {
+  return isSupabaseConfigured() && Boolean(getSupabaseSecretKey());
 }
 
 export function getServerEnv(): ServerEnv {
   const supabaseUrl = getSupabaseUrl();
   const supabaseAnonKey = getSupabasePublicKey();
-  const supabaseServiceRoleKey = readEnv("SUPABASE_SERVICE_ROLE_KEY");
+  const supabaseServiceRoleKey = getSupabaseSecretKey();
 
   const missing: string[] = [];
   if (!supabaseUrl) missing.push("NEXT_PUBLIC_SUPABASE_URL");
@@ -55,4 +71,15 @@ export function getServerEnv(): ServerEnv {
 
 export function getOptionalEnvKeys(): readonly string[] {
   return optionalServerEnv;
+}
+
+/** Secreto compartido con Google Apps Script para importar rutas desde Sheets. */
+export function getSheetsImportSecret(): string | undefined {
+  const value = readEnv("SHEETS_IMPORT_SECRET");
+  if (!value || value === "genera_un_secreto_largo") return undefined;
+  return value;
+}
+
+export function isSheetsImportConfigured(): boolean {
+  return isSupabaseAdminConfigured() && Boolean(getSheetsImportSecret());
 }

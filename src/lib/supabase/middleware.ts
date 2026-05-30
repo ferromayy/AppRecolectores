@@ -1,9 +1,10 @@
 import { createServerClient } from "@supabase/ssr";
 import { NextResponse, type NextRequest } from "next/server";
 
-import { SUPERADMIN_EMAIL } from "@/lib/auth/constants";
+import { canManageUsers, isSuperadminUser } from "@/lib/auth/permissions";
 import { getSupabasePublicKey, getSupabaseUrl } from "@/lib/env";
 import type { Database } from "@/types/database";
+import type { UserRole } from "@/lib/auth/constants";
 
 const PUBLIC_PREFIXES = ["/login", "/auth", "/api/health", "/api/db/status"];
 
@@ -12,6 +13,10 @@ function isPublicPath(pathname: string) {
   return PUBLIC_PREFIXES.some(
     (prefix) => pathname === prefix || pathname.startsWith(`${prefix}/`),
   );
+}
+
+function isStaffProfile(role: UserRole | undefined) {
+  return role === "superadmin" || role === "admin";
 }
 
 export async function updateSession(request: NextRequest) {
@@ -47,6 +52,10 @@ export async function updateSession(request: NextRequest) {
   } = await supabase.auth.getUser();
 
   if (pathname.startsWith("/admin")) {
+    if (pathname === "/admin/usuarios" || pathname.startsWith("/admin/usuarios/")) {
+      return NextResponse.redirect(new URL("/panel/usuarios", request.url));
+    }
+
     const loginUrl = new URL("/login", request.url);
     loginUrl.searchParams.set("next", pathname);
 
@@ -60,14 +69,54 @@ export async function updateSession(request: NextRequest) {
       .eq("id", user.id)
       .maybeSingle();
 
-    const isSuperadmin =
-      profile?.role === "superadmin" &&
-      user.email?.toLowerCase() === SUPERADMIN_EMAIL.toLowerCase();
-
-    if (!isSuperadmin) {
+    if (!isSuperadminUser(profile, user.email)) {
       const denied = new URL("/login", request.url);
       denied.searchParams.set("error", "sin_permiso");
       return NextResponse.redirect(denied);
+    }
+  }
+
+  if (
+    pathname === "/panel/rutas" ||
+    pathname.startsWith("/panel/rutas/")
+  ) {
+    const loginUrl = new URL("/login", request.url);
+    loginUrl.searchParams.set("next", pathname);
+
+    if (!user) {
+      return NextResponse.redirect(loginUrl);
+    }
+
+    const { data: profile } = await supabase
+      .from("profiles")
+      .select("role")
+      .eq("id", user.id)
+      .maybeSingle();
+
+    if (!isStaffProfile(profile?.role)) {
+      return NextResponse.redirect(new URL("/panel", request.url));
+    }
+  }
+
+  if (
+    pathname === "/panel/usuarios" ||
+    pathname.startsWith("/panel/usuarios/")
+  ) {
+    const loginUrl = new URL("/login", request.url);
+    loginUrl.searchParams.set("next", pathname);
+
+    if (!user) {
+      return NextResponse.redirect(loginUrl);
+    }
+
+    const { data: profile } = await supabase
+      .from("profiles")
+      .select("role")
+      .eq("id", user.id)
+      .maybeSingle();
+
+    if (!canManageUsers(profile)) {
+      return NextResponse.redirect(new URL("/panel", request.url));
     }
   }
 
@@ -79,7 +128,7 @@ export async function updateSession(request: NextRequest) {
       .maybeSingle();
 
     if (profile?.role === "superadmin") {
-      return NextResponse.redirect(new URL("/admin/usuarios", request.url));
+      return NextResponse.redirect(new URL("/panel", request.url));
     }
     return NextResponse.redirect(new URL("/panel", request.url));
   }
