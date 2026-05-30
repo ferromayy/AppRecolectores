@@ -25,12 +25,16 @@ export type RutaEstado =
   | "completada"
   | "cancelada";
 
-export type ParadaEstado =
+export type RutaTurno = "manana" | "tarde";
+
+export type RecoleccionOperativaEstado =
   | "pendiente"
   | "en_camino"
   | "visitada"
   | "omitida"
   | "cancelada";
+
+export type ParadaEstado = RecoleccionOperativaEstado;
 
 export type Database = {
   public: {
@@ -148,6 +152,7 @@ export type Database = {
           id: string;
           nombre: string;
           fecha: string;
+          turno: RutaTurno | null;
           estado: RutaEstado;
           asignado_a: string | null;
           spreadsheet_id: string | null;
@@ -164,6 +169,7 @@ export type Database = {
           id?: string;
           nombre: string;
           fecha: string;
+          turno?: RutaTurno | null;
           estado?: RutaEstado;
           asignado_a?: string | null;
           spreadsheet_id?: string | null;
@@ -180,6 +186,7 @@ export type Database = {
           id?: string;
           nombre?: string;
           fecha?: string;
+          turno?: RutaTurno | null;
           estado?: RutaEstado;
           asignado_a?: string | null;
           spreadsheet_id?: string | null;
@@ -236,6 +243,102 @@ export type Database = {
         };
         Relationships: [];
       };
+      ruta_recolecciones: {
+        Row: {
+          id: string;
+          ruta_id: string;
+          orden: number;
+          zona: string | null;
+          nombre: string;
+          unidad: string | null;
+          tipo_servicio: string | null;
+          frecuencia: string | null;
+          barrio: string | null;
+          direccion: string;
+          depto: string | null;
+          telefono: string | null;
+          telefono_normalizado: string;
+          observaciones: string | null;
+          dia: string;
+          hora: string;
+          nota_encargado: string | null;
+          precio: string | null;
+          deuda: string | null;
+          latitud: number | null;
+          longitud: number | null;
+          coordenadas_dms: string | null;
+          direccion_google: string | null;
+          estado_operativo: RecoleccionOperativaEstado;
+          sheet_fila: number | null;
+          sheet_estado: string | null;
+          sheet_mensaje: string | null;
+          created_at: string;
+          updated_at: string;
+        };
+        Insert: {
+          id?: string;
+          ruta_id: string;
+          orden: number;
+          zona?: string | null;
+          nombre: string;
+          unidad?: string | null;
+          tipo_servicio?: string | null;
+          frecuencia?: string | null;
+          barrio?: string | null;
+          direccion: string;
+          depto?: string | null;
+          telefono?: string | null;
+          telefono_normalizado: string;
+          observaciones?: string | null;
+          dia: string;
+          hora: string;
+          nota_encargado?: string | null;
+          precio?: string | null;
+          deuda?: string | null;
+          latitud?: number | null;
+          longitud?: number | null;
+          coordenadas_dms?: string | null;
+          direccion_google?: string | null;
+          estado_operativo?: RecoleccionOperativaEstado;
+          sheet_fila?: number | null;
+          sheet_estado?: string | null;
+          sheet_mensaje?: string | null;
+          created_at?: string;
+          updated_at?: string;
+        };
+        Update: {
+          id?: string;
+          ruta_id?: string;
+          orden?: number;
+          zona?: string | null;
+          nombre?: string;
+          unidad?: string | null;
+          tipo_servicio?: string | null;
+          frecuencia?: string | null;
+          barrio?: string | null;
+          direccion?: string;
+          depto?: string | null;
+          telefono?: string | null;
+          telefono_normalizado?: string;
+          observaciones?: string | null;
+          dia?: string;
+          hora?: string;
+          nota_encargado?: string | null;
+          precio?: string | null;
+          deuda?: string | null;
+          latitud?: number | null;
+          longitud?: number | null;
+          coordenadas_dms?: string | null;
+          direccion_google?: string | null;
+          estado_operativo?: RecoleccionOperativaEstado;
+          sheet_fila?: number | null;
+          sheet_estado?: string | null;
+          sheet_mensaje?: string | null;
+          created_at?: string;
+          updated_at?: string;
+        };
+        Relationships: [];
+      };
     };
     Views: Record<string, never>;
     Functions: {
@@ -248,7 +351,9 @@ export type Database = {
       organizacion_tipo: OrganizacionTipo;
       recoleccion_estado: RecoleccionEstado;
       ruta_estado: RutaEstado;
+      ruta_turno: RutaTurno;
       parada_estado: ParadaEstado;
+      recoleccion_operativa_estado: RecoleccionOperativaEstado;
     };
     CompositeTypes: Record<string, never>;
   };

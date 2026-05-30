@@ -51,6 +51,9 @@ export async function loginAction(
   }
 
   if (profile?.role === "admin" || profile?.role === "recolector") {
+    if (profile.role === "recolector") {
+      redirect("/panel/mis-rutas");
+    }
     redirect("/panel");
   }
 

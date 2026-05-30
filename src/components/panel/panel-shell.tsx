@@ -1,6 +1,7 @@
 import Link from "next/link";
 
 import { logoutAction } from "@/app/login/actions";
+import { RecolectorShell } from "@/components/panel/recolector/recolector-shell";
 import { ROLE_LABELS, type UserRole } from "@/lib/auth/constants";
 import { canManageUsers } from "@/lib/auth/permissions";
 import { isStaffRole } from "@/lib/domain/constants";
@@ -12,6 +13,10 @@ type Props = {
 };
 
 export function PanelShell({ children, role, userName }: Props) {
+  if (role === "recolector") {
+    return <RecolectorShell userName={userName}>{children}</RecolectorShell>;
+  }
+
   const links = [{ href: "/panel", label: "Inicio" }];
 
   if (isStaffRole(role)) {

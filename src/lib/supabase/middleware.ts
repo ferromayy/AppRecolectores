@@ -127,8 +127,8 @@ export async function updateSession(request: NextRequest) {
       .eq("id", user.id)
       .maybeSingle();
 
-    if (profile?.role === "superadmin") {
-      return NextResponse.redirect(new URL("/panel", request.url));
+    if (profile?.role === "recolector") {
+      return NextResponse.redirect(new URL("/panel/mis-rutas", request.url));
     }
     return NextResponse.redirect(new URL("/panel", request.url));
   }

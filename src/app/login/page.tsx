@@ -1,4 +1,5 @@
 import Link from "next/link";
+import { Suspense } from "react";
 
 import { LoginForm } from "@/components/auth/login-form";
 import { LoginHashHandler } from "@/app/login/login-extras";
@@ -30,8 +31,11 @@ export default async function LoginPage({ searchParams }: LoginPageProps) {
     : undefined;
 
   return (
-    <div className="flex min-h-screen items-center justify-center bg-zinc-50 px-6 py-12 dark:bg-zinc-950">
-      <div className="w-full max-w-md space-y-8">
+    <div
+      className="flex min-h-[100dvh] items-center justify-center bg-zinc-100 px-4 py-8 dark:bg-zinc-950"
+      style={{ paddingTop: "max(2rem, env(safe-area-inset-top))" }}
+    >
+      <div className="w-full max-w-md space-y-6">
         <div className="space-y-2 text-center">
           <p className="text-xs font-medium uppercase tracking-widest text-emerald-700 dark:text-emerald-400">
             App Recolectores
@@ -40,20 +44,22 @@ export default async function LoginPage({ searchParams }: LoginPageProps) {
             Iniciar sesión
           </h1>
           <p className="text-sm text-zinc-600 dark:text-zinc-400">
-            Acceso interno para superadmin, administradores y recolectores.
+            Acceso para recolectores en campo y equipo operativo.
           </p>
         </div>
 
         {bannerInfo && (
-          <p className="rounded-lg border border-emerald-200 bg-emerald-50 px-4 py-3 text-sm text-emerald-900 dark:border-emerald-900 dark:bg-emerald-950 dark:text-emerald-200">
+          <p className="rounded-2xl border border-emerald-200 bg-emerald-50 px-4 py-3 text-sm text-emerald-900 dark:border-emerald-900 dark:bg-emerald-950 dark:text-emerald-200">
             {bannerInfo}
           </p>
         )}
 
-        <LoginHashHandler />
+        <Suspense fallback={null}>
+          <LoginHashHandler />
+        </Suspense>
 
         {bannerError && (
-          <p className="rounded-lg border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-800 dark:border-red-900 dark:bg-red-950 dark:text-red-200">
+          <p className="rounded-2xl border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-800 dark:border-red-900 dark:bg-red-950 dark:text-red-200">
             {bannerError}
           </p>
         )}
@@ -61,9 +67,6 @@ export default async function LoginPage({ searchParams }: LoginPageProps) {
         <LoginForm />
 
         <p className="text-center text-xs text-zinc-500">
-          Superadmin:{" "}
-          <span className="font-medium">somos@ecolink.com.ar</span>
-          <br />
           <Link href="/" className="underline hover:text-zinc-700">
             Volver al inicio
           </Link>

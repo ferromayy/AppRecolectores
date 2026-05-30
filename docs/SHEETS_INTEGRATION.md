@@ -1,101 +1,71 @@
-# Integración Google Sheets → App Recolectores
+# Integración Google Sheets — Rutas y recolecciones
 
-Importá una **ruta** desde Google Sheets con un botón, usando **Apps Script**.
+## Modelo de datos
 
-> **MVP actual:** solo 3 datos por ruta — **nombre**, **fecha** y **asignado** (recolector).  
-> Las paradas y columnas reales se agregan cuando la automatización esté validada.
+### Ruta (se agrupa automáticamente)
 
-## Arquitectura
+Una **ruta** se identifica por:
+
+| Clave | Origen en planilla |
+|-------|-------------------|
+| **Fecha** | Columna `Dia` (YYYY-MM-DD) |
+| **Turno** | Derivado de `Hora`: antes de 12:00 = Mañana, desde 12:00 = Tarde |
+| **Recolector** | Columna `Recolector` (email que existe en la app) |
+
+Si cambia la fecha, el turno o el recolector → es **otra ruta**.
+
+### Recolección (cada fila de la planilla)
+
+Cada fila es una recolección/cliente, único por **teléfono normalizado** dentro de la ruta.
+
+## Columnas de la hoja `Rutas`
+
+Fila 1 = encabezados exactos:
 
 ```
-Google Sheet (hoja "Rutas")
-        │
-        │  Botón → Apps Script
-        ▼
-POST /api/integrations/sheets/import-ruta
-        │
-        ▼
-Supabase: tabla rutas
-        │
-        ▼
-Panel admin → /panel/rutas
+Zona | Nombre | Unidad | Tipo de servicio | Frecuencia | Barrio | Direccion | Depto | Telefono* | Observaciones | Dia | Hora | Nota encargado | Precio | Deuda | Recolector | Estado | MensajeSistema
 ```
 
-## 1. Configurar la app
+### Obligatorios por fila
 
-En `.env.local` (y en Vercel):
+- Nombre, Direccion, Dia, Hora, Recolector, Telefono
 
-```env
-SHEETS_IMPORT_SECRET=un_secreto_largo_y_aleatorio
-```
+### Enums
 
-```bash
-openssl rand -base64 32
-```
+| Campo | Valores |
+|-------|---------|
+| Unidad | Hogar, Empresa, Puntos |
+| Tipo de servicio | Reciclaje, Mixto, Organico |
+| Frecuencia | Mensual, Puntual, Semanal |
 
-## 2. Migración SQL
+### Estado (automático — no editar)
 
-Ejecutá en Supabase: `supabase/migrations/20260521120000_rutas_sheets_import.sql`
+| Estado | Significado |
+|--------|-------------|
+| Pendiente | Lista para enviar (fondo amarillo) |
+| Incompleto | Faltan datos (rojo suave) |
+| Error | Datos inválidos (rojo suave + celda en rojo fuerte) |
+| Enviada | Ya importada (verde, no se revalida) |
 
-## 3. Estructura de la planilla (MVP)
+## Apps Script — instalación
 
-Hoja **`Rutas`** con **fila 1 = títulos** y **una ruta por fila** desde la fila 2:
+1. Pegar `scripts/google-apps-script/ImportarRuta.gs` en Extensiones → Apps Script
+2. **Configurar integración** → URL `https://app-recolectores.vercel.app` + secreto
+3. **Actualizar desplegable recolectores** (trae emails de la base)
+4. Completar filas de datos
+5. **Validar todas las filas**
+6. **Enviar pendientes a la app**
 
-| nombre | fecha | asignado |
-|--------|-------|----------|
-| Ruta Norte 19/05 | 2026-05-19 | recolector@ecolink.com.ar |
-| Ruta Sur 19/05 | 2026-05-19 | otro@ecolink.com.ar |
+## API
 
-- **nombre**: identificador de la ruta
-- **fecha**: formato `YYYY-MM-DD` (Google Sheets puede usar celda fecha; el script la convierte)
-- **asignado**: email del recolector (debe existir en la app). También acepta nombre completo si coincide exactamente
-- Filas vacías se ignoran
-- El botón importa **todas** las filas con datos de una vez
+- `GET /api/integrations/sheets/import-recolecciones` — lista recolectores
+- `POST /api/integrations/sheets/import-recolecciones` — importa filas Pendiente
 
-## 4. Apps Script
+## Migraciones SQL (Supabase)
 
-1. Abrí tu Google Sheet
-2. **Extensiones → Apps Script**
-3. Pegá `scripts/google-apps-script/ImportarRuta.gs`
-4. Ejecutá **configurarIntegracion** (URL + secreto)
-5. Recargá la planilla → menú **App Recolectores → Importar rutas a la app**
-6. (Opcional) Botón de dibujo → función `importarRutas` (o `importarRutaActiva`)
+1. `20260521120000_rutas_sheets_import.sql`
+2. `20260522120000_rutas_recolecciones_full.sql`
 
-## 5. Probar
+## Depto — evitar que Sheets lo convierta a fecha
 
-1. Completá los 3 campos en la hoja `Rutas`
-2. Importá desde el menú
-3. Verificá en `/panel/rutas`
-
-Reimportar la misma planilla **actualiza** la ruta existente.
-
-## 6. API (referencia)
-
-**POST** `/api/integrations/sheets/import-ruta`
-
-```json
-{
-  "ruta": {
-    "nombre": "Ruta Norte",
-    "fecha": "2026-05-19",
-    "asignado": "recolector@ecolink.com.ar"
-  }
-}
-```
-
-Respuesta:
-
-```json
-{
-  "ok": true,
-  "ruta_id": "uuid",
-  "paradas_count": 0,
-  "reimported": false,
-  "warnings": [],
-  "message": "Ruta \"Ruta Norte\" importada."
-}
-```
-
-## Próximo paso
-
-Cuando funcione el flujo básico, se activa el envío de **paradas** (direcciones, generadores, etc.) desde otra hoja de la misma planilla.
+Seleccioná la columna Depto → Formato → **Texto plano**.
