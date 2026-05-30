@@ -22,8 +22,17 @@ export function AdminUsersPanel({ creatableRoles }: Props) {
     setLoading(true);
     setError(null);
     const res = await fetch("/api/admin/users");
-    const data = await res.json();
     setLoading(false);
+
+    const contentType = res.headers.get("content-type") ?? "";
+    if (!contentType.includes("application/json")) {
+      setError(
+        "Error del servidor (respuesta inválida). Revisá que SUPABASE_SECRET_KEY esté configurada en Vercel y redeploy.",
+      );
+      return;
+    }
+
+    const data = await res.json();
 
     if (!res.ok) {
       setError(data.error ?? "No se pudo cargar la lista");

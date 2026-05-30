@@ -23,7 +23,14 @@ export async function GET() {
 
   const roles = listableRolesFor(auth.profile.role);
 
-  const admin = createAdminClient();
+  let admin;
+  try {
+    admin = createAdminClient();
+  } catch (err) {
+    const message = err instanceof Error ? err.message : "Error de configuración";
+    return NextResponse.json({ error: message }, { status: 503 });
+  }
+
   const { data, error } = await admin
     .from("profiles")
     .select("id, email, role, full_name, created_at, updated_at")
