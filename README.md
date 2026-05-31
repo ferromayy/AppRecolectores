@@ -11,6 +11,11 @@ Aplicación interna para intermediación logística entre generadores de materia
 
 Documentación de arquitectura: [docs/ARQUITECTURA.md](./docs/ARQUITECTURA.md)
 
+**Documentación principal:**
+
+- [Guía para desarrolladores](./docs/GUIA_DESARROLLADORES.md) — onboarding técnico, APIs, migraciones, deploy
+- [Manual de uso](./docs/MANUAL_USUARIO.md) — superadmin, operario y recolector (sin código)
+
 ## Configuración local
 
 ### 1. Variables de entorno
