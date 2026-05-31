@@ -44,7 +44,7 @@ export default async function PanelHomePage() {
             <h2 className="text-sm font-semibold uppercase tracking-wide text-zinc-500">
               Hoy · {formatRutaFecha(todayIso())}
             </h2>
-            <MisRutasCards rutas={rutasHoy} compact />
+            <MisRutasCards rutas={rutasHoy} compact groupByTurno />
           </section>
         )}
 

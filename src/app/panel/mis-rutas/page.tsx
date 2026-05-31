@@ -19,6 +19,7 @@ export default async function MisRutasPage() {
     .select("*")
     .eq("asignado_a", auth.user.id)
     .order("fecha", { ascending: false })
+    .order("turno", { ascending: true })
     .order("created_at", { ascending: false });
 
   return (
@@ -28,7 +29,7 @@ export default async function MisRutasPage() {
           Mis rutas
         </h1>
         <p className="mt-1 text-sm text-zinc-500">
-          Recorridos asignados para hoy y días anteriores.
+          Organizadas por turno: mañana y tarde.
         </p>
       </div>
 
@@ -38,7 +39,7 @@ export default async function MisRutasPage() {
         </p>
       )}
 
-      <MisRutasCards rutas={rutas ?? []} />
+      <MisRutasCards rutas={rutas ?? []} groupByTurno />
     </div>
   );
 }

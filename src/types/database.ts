@@ -161,6 +161,8 @@ export type Database = {
           external_key: string | null;
           imported_at: string | null;
           metadata: Json;
+          km_inicial: number | null;
+          insumos_inicio: Json;
           km_recorridos: number | null;
           inicio_jornada_at: string | null;
           cierre_recolector_at: string | null;
@@ -186,6 +188,8 @@ export type Database = {
           external_key?: string | null;
           imported_at?: string | null;
           metadata?: Json;
+          km_inicial?: number | null;
+          insumos_inicio?: Json;
           km_recorridos?: number | null;
           inicio_jornada_at?: string | null;
           cierre_recolector_at?: string | null;
@@ -211,6 +215,8 @@ export type Database = {
           external_key?: string | null;
           imported_at?: string | null;
           metadata?: Json;
+          km_inicial?: number | null;
+          insumos_inicio?: Json;
           km_recorridos?: number | null;
           inicio_jornada_at?: string | null;
           cierre_recolector_at?: string | null;
@@ -300,6 +306,12 @@ export type Database = {
           precio_total: number | null;
           monto_efectivo: number | null;
           monto_transferencia: number | null;
+          monto_qr: number | null;
+          motivo_cancelacion: string | null;
+          bolsas_llenas: number | null;
+          biotachos_llenos: number | null;
+          bolsas_nuevas: number | null;
+          biotachos_nuevos: number | null;
           detalle: string | null;
           firma_digital: string | null;
           nombre_firmante: string | null;
@@ -338,6 +350,12 @@ export type Database = {
           precio_total?: number | null;
           monto_efectivo?: number | null;
           monto_transferencia?: number | null;
+          monto_qr?: number | null;
+          motivo_cancelacion?: string | null;
+          bolsas_llenas?: number | null;
+          biotachos_llenos?: number | null;
+          bolsas_nuevas?: number | null;
+          biotachos_nuevos?: number | null;
           detalle?: string | null;
           firma_digital?: string | null;
           nombre_firmante?: string | null;
@@ -376,6 +394,12 @@ export type Database = {
           precio_total?: number | null;
           monto_efectivo?: number | null;
           monto_transferencia?: number | null;
+          monto_qr?: number | null;
+          motivo_cancelacion?: string | null;
+          bolsas_llenas?: number | null;
+          biotachos_llenos?: number | null;
+          bolsas_nuevas?: number | null;
+          biotachos_nuevos?: number | null;
           detalle?: string | null;
           firma_digital?: string | null;
           nombre_firmante?: string | null;
