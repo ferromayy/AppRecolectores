@@ -1,8 +1,7 @@
 import { NextResponse } from "next/server";
 
 import {
-  buildGeocodeQuery,
-  geocodeAddress,
+  geocodeAddressWithFallback,
   latLngToDms,
 } from "@/lib/integrations/google-geocoding";
 import { requireStaff } from "@/lib/auth/session";
@@ -55,6 +54,18 @@ export async function GET(_request: Request, { params }: Props) {
   const puntos: MapaPunto[] = [];
   let geocodificados = 0;
   let fallidos = 0;
+  const total = (recolecciones ?? []).length;
+
+  if (total === 0) {
+    return NextResponse.json({
+      ok: true,
+      puntos,
+      geocodificados: 0,
+      fallidos: 0,
+      total: 0,
+      mensaje: "Esta ruta no tiene recolecciones importadas.",
+    });
+  }
 
   for (const item of recolecciones ?? []) {
     if (item.latitud != null && item.longitud != null) {
@@ -70,14 +81,16 @@ export async function GET(_request: Request, { params }: Props) {
       continue;
     }
 
-    const query = buildGeocodeQuery({
-      direccion: item.direccion,
-      barrio: item.barrio,
-      depto: item.depto,
-    });
+    const hit = await geocodeAddressWithFallback(
+      {
+        direccion: item.direccion,
+        barrio: item.barrio,
+        depto: item.depto,
+      },
+      geocodingKey,
+    );
 
-    const hit = await geocodeAddress(query, geocodingKey);
-    if (!hit) {
+    if (!hit.ok) {
       fallidos += 1;
       continue;
     }
@@ -104,11 +117,20 @@ export async function GET(_request: Request, { params }: Props) {
     });
   }
 
+  let mensaje: string | undefined;
+  if (puntos.length === 0) {
+    mensaje =
+      fallidos > 0
+        ? `No se pudieron ubicar ${fallidos} dirección(es). Revisá que incluyan calle, número y ciudad.`
+        : "No hay puntos con ubicación para esta ruta.";
+  }
+
   return NextResponse.json({
     ok: true,
     puntos,
     geocodificados,
     fallidos,
-    total: (recolecciones ?? []).length,
+    total,
+    mensaje,
   });
 }

@@ -20,6 +20,7 @@ type MapaResponse = {
   geocodificados?: number;
   fallidos?: number;
   total?: number;
+  mensaje?: string;
   error?: string;
 };
 
@@ -165,7 +166,12 @@ export function OperarioRutaMapModal({
         await renderMap(puntos);
 
         if (puntos.length === 0) {
-          setError("No hay puntos con ubicación para esta ruta.");
+          setError(
+            body.mensaje ??
+              (body.total === 0
+                ? "Esta ruta no tiene recolecciones importadas."
+                : "No hay puntos con ubicación para esta ruta."),
+          );
         }
       } catch {
         if (!cancelled) setError("Error de red al cargar el mapa.");
