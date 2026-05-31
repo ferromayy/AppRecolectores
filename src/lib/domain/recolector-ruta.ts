@@ -185,6 +185,14 @@ export function buildRecolectorRecoleccionDetalle(
   };
 }
 
+export function buildDireccionesMapsActivas(
+  recolecciones: Pick<RecoleccionRow, "direccion" | "estado_operativo">[],
+): string[] {
+  return recolecciones
+    .filter((item) => item.estado_operativo !== "visitada")
+    .map((item) => item.direccion);
+}
+
 export function buildGoogleMapsDirectionsUrl(addresses: string[]): string | null {
   const cleaned = addresses.map((a) => a.trim()).filter(Boolean);
   if (cleaned.length === 0) return null;

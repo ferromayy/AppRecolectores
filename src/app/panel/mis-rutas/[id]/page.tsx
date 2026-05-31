@@ -6,6 +6,7 @@ import {
   buildRecolectorRecoleccionDetalle,
   buildRecolectorRecoleccionPreview,
   buildRecolectorRutaDetalle,
+  buildDireccionesMapsActivas,
 } from "@/lib/domain/recolector-ruta";
 import { createClient } from "@/lib/supabase/server";
 
@@ -45,7 +46,7 @@ export default async function MisRutaDetallePage({ params }: Props) {
   const rutaDetalle = buildRecolectorRutaDetalle(ruta, items);
   const preview = items.map(buildRecolectorRecoleccionPreview);
   const detalle = items.map(buildRecolectorRecoleccionDetalle);
-  const direccionesMaps = items.map((item) => item.direccion);
+  const direccionesMaps = buildDireccionesMapsActivas(items);
 
   return (
     <RecolectorRutaDetalle

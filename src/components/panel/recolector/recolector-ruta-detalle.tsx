@@ -46,7 +46,7 @@ export function RecolectorRutaDetalle({
 
   function handleMaps() {
     if (!mapsUrl) {
-      setError("No hay direcciones para abrir en Maps");
+      setError("No hay paradas pendientes para abrir en Maps");
       return;
     }
     window.open(mapsUrl, "_blank", "noopener,noreferrer");
