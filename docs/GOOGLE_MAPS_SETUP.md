@@ -87,11 +87,12 @@ URL directa: [https://console.cloud.google.com/apis/credentials](https://console
 
 ```
 http://localhost:3000/*
+http://127.0.0.1:3000/*
 https://app-recolectores.vercel.app/*
 https://*.vercel.app/*
 ```
 
-> El wildcard de Vercel ayuda en previews. Cuando tengas dominio propio, agregá también `https://tudominio.com/*`.
+> **Importante:** estos referentes van en la key del **mapa** (`NEXT_PUBLIC_GOOGLE_MAPS_API_KEY`), no en la de geocoding. El `/*` al final es obligatorio para que funcione `/panel` y otras rutas.
 
 6. **Restricciones de API** → **Restringir clave**
 7. Marcá **solo:** `Maps JavaScript API`
@@ -170,6 +171,7 @@ npm run dev
 | Botón **Ver mapa** gris | Falta `NEXT_PUBLIC_GOOGLE_MAPS_API_KEY` | Paso 9 / 10 |
 | “Falta GOOGLE_MAPS_GEOCODING_API_KEY” | Falta key de servidor en Vercel | Paso 10 + redeploy |
 | Mapa gris / “For development purposes only” | Facturación no vinculada | Paso 3 |
+| Mapa gris / vacío con “1 punto(s)” arriba | **RefererNotAllowedMapError** — referentes HTTP mal configurados | Paso 7: agregá `http://localhost:3000/*` (con `/*`) a la key del mapa. Esperá 1–2 min y recargá con Ctrl+Shift+R |
 | “This page can't load Google Maps correctly” | Key mal restringida | Revisá referentes HTTP (paso 7) |
 | “REQUEST_DENIED” en geocoding | Geocoding API no habilitada o key restringida mal | Pasos 6 y 8 |
 | “No hay puntos con ubicación” | Direcciones inválidas o geocoding falló | Revisá direcciones en la planilla |

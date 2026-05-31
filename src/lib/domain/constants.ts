@@ -71,10 +71,20 @@ export const RUTA_ESTADO_OPERARIO_LABELS: Record<RutaEstado, string> = {
   cancelada: "Cancelada",
 };
 
+export const RUTA_TURNOS = ["manana", "tarde"] as const;
+
 export const RUTA_TURNO_LABELS = {
   manana: "Mañana",
   tarde: "Tarde",
 } as const;
+
+export const RECOLECCION_OPERATIVA_ESTADOS = [
+  "pendiente",
+  "en_camino",
+  "visitada",
+  "omitida",
+  "cancelada",
+] as const;
 
 export const RECOLECCION_OPERATIVA_LABELS = {
   pendiente: "Pendiente",

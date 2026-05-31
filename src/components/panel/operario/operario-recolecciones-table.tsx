@@ -1,6 +1,5 @@
 import {
   RecoleccionEstadoBadge,
-  RutaEstadoBadge,
   ZonaBadge,
 } from "@/components/panel/operario/operario-badges";
 import {
@@ -12,9 +11,14 @@ import {
 type Props = {
   recolecciones: RecoleccionOperarioRow[];
   rutaSeleccionada: boolean;
+  onEditar: (id: string) => void;
 };
 
-export function OperarioRecoleccionesTable({ recolecciones, rutaSeleccionada }: Props) {
+export function OperarioRecoleccionesTable({
+  recolecciones,
+  rutaSeleccionada,
+  onEditar,
+}: Props) {
   if (!rutaSeleccionada) {
     return (
       <div className="rounded-xl border border-dashed border-zinc-300 bg-white p-8 text-center text-sm text-zinc-500 dark:border-zinc-700 dark:bg-zinc-900">
@@ -36,6 +40,7 @@ export function OperarioRecoleccionesTable({ recolecciones, rutaSeleccionada }: 
       <table className="min-w-[1100px] w-full text-left text-sm">
         <thead className="border-b border-zinc-200 bg-zinc-50 text-xs uppercase tracking-wide text-zinc-600 dark:border-zinc-800 dark:bg-zinc-950 dark:text-zinc-400">
           <tr>
+            <th className="px-3 py-3 font-medium">#</th>
             <th className="px-3 py-3 font-medium">Estado</th>
             <th className="px-3 py-3 font-medium">Zona</th>
             <th className="px-3 py-3 font-medium">Dirección</th>
@@ -49,6 +54,7 @@ export function OperarioRecoleccionesTable({ recolecciones, rutaSeleccionada }: 
             <th className="px-3 py-3 font-medium">Detalle</th>
             <th className="px-3 py-3 font-medium">Firma</th>
             <th className="px-3 py-3 font-medium">Firmante</th>
+            <th className="px-3 py-3 font-medium text-center">Acciones</th>
           </tr>
         </thead>
         <tbody>
@@ -57,6 +63,9 @@ export function OperarioRecoleccionesTable({ recolecciones, rutaSeleccionada }: 
               key={item.id}
               className="border-b border-zinc-100 last:border-0 dark:border-zinc-800"
             >
+              <td className="whitespace-nowrap px-3 py-2.5 font-semibold text-zinc-700 dark:text-zinc-200">
+                {item.orden}
+              </td>
               <td className="whitespace-nowrap px-3 py-2.5">
                 <RecoleccionEstadoBadge estado={item.estado_operativo} />
               </td>
@@ -94,6 +103,15 @@ export function OperarioRecoleccionesTable({ recolecciones, rutaSeleccionada }: 
                 )}
               </td>
               <td className="px-3 py-2.5">{item.nombre_firmante || "—"}</td>
+              <td className="px-3 py-2.5 text-center">
+                <button
+                  type="button"
+                  onClick={() => onEditar(item.id)}
+                  className="rounded-lg border border-zinc-200 bg-white px-2.5 py-1 text-xs font-medium text-zinc-700 hover:bg-zinc-50 dark:border-zinc-700 dark:bg-zinc-900 dark:text-zinc-200 dark:hover:bg-zinc-800"
+                >
+                  Editar
+                </button>
+              </td>
             </tr>
           ))}
         </tbody>

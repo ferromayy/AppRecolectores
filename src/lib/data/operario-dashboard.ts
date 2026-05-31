@@ -3,6 +3,7 @@ import { createAdminClient } from "@/lib/supabase/admin";
 import {
   buildRecoleccionOperarioRows,
   buildRutaOperarioRows,
+  type RecolectorOption,
 } from "@/lib/domain/operario-dashboard";
 
 type RecoleccionRow = Database["public"]["Tables"]["ruta_recolecciones"]["Row"];
@@ -18,7 +19,7 @@ export async function fetchOperarioDashboardData() {
     .limit(200);
 
   if (rutasError) {
-    return { rutas: [], recolecciones: [], error: rutasError.message };
+    return { rutas: [], recolecciones: [], recolectores: [] as RecolectorOption[], error: rutasError.message };
   }
 
   const rutaIds = (rutas ?? []).map((r) => r.id);
@@ -45,5 +46,10 @@ export async function fetchOperarioDashboardData() {
   );
   const recolecciones = buildRecoleccionOperarioRows(recoleccionesRaw);
 
-  return { rutas: rutasRows, recolecciones, error: null };
+  const recolectoresOptions: RecolectorOption[] = (recolectores ?? []).map((r) => ({
+    id: r.id,
+    nombre: r.full_name || r.email || "Sin nombre",
+  }));
+
+  return { rutas: rutasRows, recolecciones, recolectores: recolectoresOptions, error: null };
 }

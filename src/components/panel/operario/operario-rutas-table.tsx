@@ -13,6 +13,7 @@ type Props = {
   onSelect: (id: string) => void;
   onVerDetalle: (id: string) => void;
   onVerMapa: (id: string) => void;
+  onEditar: (id: string) => void;
   mapsDisponible: boolean;
 };
 
@@ -22,6 +23,7 @@ export function OperarioRutasTable({
   onSelect,
   onVerDetalle,
   onVerMapa,
+  onEditar,
   mapsDisponible,
 }: Props) {
   if (rutas.length === 0) {
@@ -51,6 +53,7 @@ export function OperarioRutasTable({
             <th className="px-3 py-3 font-medium">Observaciones</th>
             <th className="px-3 py-3 font-medium text-center">Detalle</th>
             <th className="px-3 py-3 font-medium text-center">Mapa</th>
+            <th className="px-3 py-3 font-medium text-center">Acciones</th>
           </tr>
         </thead>
         <tbody>
@@ -118,6 +121,18 @@ export function OperarioRutasTable({
                     className="rounded-lg border border-blue-200 bg-blue-50 px-2.5 py-1 text-xs font-medium text-blue-800 hover:bg-blue-100 disabled:cursor-not-allowed disabled:opacity-40 dark:border-blue-800 dark:bg-blue-950 dark:text-blue-300 dark:hover:bg-blue-900"
                   >
                     Ver mapa
+                  </button>
+                </td>
+                <td className="px-3 py-2.5 text-center">
+                  <button
+                    type="button"
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      onEditar(ruta.id);
+                    }}
+                    className="rounded-lg border border-zinc-200 bg-white px-2.5 py-1 text-xs font-medium text-zinc-700 hover:bg-zinc-50 dark:border-zinc-700 dark:bg-zinc-900 dark:text-zinc-200 dark:hover:bg-zinc-800"
+                  >
+                    Editar
                   </button>
                 </td>
               </tr>

@@ -9,12 +9,18 @@ type RutaRow = Database["public"]["Tables"]["rutas"]["Row"];
 type RecoleccionRow = Database["public"]["Tables"]["ruta_recolecciones"]["Row"];
 type ProfileRow = Database["public"]["Tables"]["profiles"]["Row"];
 
+export type RecolectorOption = {
+  id: string;
+  nombre: string;
+};
+
 export type RutaOperarioRow = {
   id: string;
   fecha: string;
   turno: RutaTurno | null;
   estado: RutaEstado;
   nombre: string;
+  asignado_a: string | null;
   recolector_nombre: string | null;
   puntos_recoleccion: number;
   recolecciones_exitosas: number;
@@ -37,6 +43,9 @@ export type RecoleccionOperarioRow = {
   zona: string | null;
   estado_operativo: RecoleccionOperativaEstado;
   direccion: string;
+  barrio: string | null;
+  depto: string | null;
+  telefono: string | null;
   hora_programada: string;
   nombre: string;
   hora_real: string | null;
@@ -119,6 +128,7 @@ export function buildRutaOperarioRows(
       turno: ruta.turno,
       estado: ruta.estado,
       nombre: ruta.nombre,
+      asignado_a: ruta.asignado_a,
       recolector_nombre: ruta.asignado_a
         ? (recMap.get(ruta.asignado_a) ?? null)
         : null,
@@ -151,6 +161,9 @@ export function buildRecoleccionOperarioRows(
       zona: item.zona,
       estado_operativo: item.estado_operativo,
       direccion: item.direccion,
+      barrio: item.barrio,
+      depto: item.depto,
+      telefono: item.telefono,
       hora_programada: String(item.hora).slice(0, 5),
       nombre: item.nombre,
       hora_real: item.hora_real,

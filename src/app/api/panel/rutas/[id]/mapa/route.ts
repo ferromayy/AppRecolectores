@@ -8,9 +8,10 @@ import { requireStaff } from "@/lib/auth/session";
 import { getGoogleGeocodingKey } from "@/lib/env";
 import { createAdminClient } from "@/lib/supabase/admin";
 
-import type { MapaPunto } from "@/lib/domain/mapa-puntos";
+import type { MapaPunto, MapaRecoleccionItem } from "@/lib/domain/mapa-puntos";
+import { toMapaPuntos } from "@/lib/domain/mapa-puntos";
 
-export type { MapaPunto };
+export type { MapaPunto, MapaRecoleccionItem };
 
 type Props = { params: Promise<{ id: string }> };
 
@@ -51,7 +52,7 @@ export async function GET(_request: Request, { params }: Props) {
     return NextResponse.json({ ok: false, error: error.message }, { status: 500 });
   }
 
-  const puntos: MapaPunto[] = [];
+  const items: MapaRecoleccionItem[] = [];
   let geocodificados = 0;
   let fallidos = 0;
   const total = (recolecciones ?? []).length;
@@ -59,7 +60,8 @@ export async function GET(_request: Request, { params }: Props) {
   if (total === 0) {
     return NextResponse.json({
       ok: true,
-      puntos,
+      recolecciones: items,
+      puntos: [],
       geocodificados: 0,
       fallidos: 0,
       total: 0,
@@ -69,7 +71,7 @@ export async function GET(_request: Request, { params }: Props) {
 
   for (const item of recolecciones ?? []) {
     if (item.latitud != null && item.longitud != null) {
-      puntos.push({
+      items.push({
         id: item.id,
         orden: item.orden,
         nombre: item.nombre,
@@ -92,6 +94,15 @@ export async function GET(_request: Request, { params }: Props) {
 
     if (!hit.ok) {
       fallidos += 1;
+      items.push({
+        id: item.id,
+        orden: item.orden,
+        nombre: item.nombre,
+        direccion: item.direccion,
+        zona: item.zona,
+        lat: null,
+        lng: null,
+      });
       continue;
     }
 
@@ -106,7 +117,7 @@ export async function GET(_request: Request, { params }: Props) {
       .eq("id", item.id);
 
     geocodificados += 1;
-    puntos.push({
+    items.push({
       id: item.id,
       orden: item.orden,
       nombre: item.nombre,
@@ -116,6 +127,8 @@ export async function GET(_request: Request, { params }: Props) {
       lng: hit.lng,
     });
   }
+
+  const puntos = toMapaPuntos(items);
 
   let mensaje: string | undefined;
   if (puntos.length === 0) {
@@ -127,6 +140,7 @@ export async function GET(_request: Request, { params }: Props) {
 
   return NextResponse.json({
     ok: true,
+    recolecciones: items,
     puntos,
     geocodificados,
     fallidos,

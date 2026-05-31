@@ -71,7 +71,7 @@ export default async function PanelHomePage() {
   }
 
   if (staff && isSupabaseAdminConfigured()) {
-    const { rutas, recolecciones, error } = await fetchOperarioDashboardData();
+    const { rutas, recolecciones, recolectores, error } = await fetchOperarioDashboardData();
     const operarioNombre = profile?.full_name || profile?.email || user?.email || "Operario";
 
     return (
@@ -84,6 +84,7 @@ export default async function PanelHomePage() {
         <OperarioDashboard
           rutas={rutas}
           recolecciones={recolecciones}
+          recolectores={recolectores}
           operarioNombre={operarioNombre}
           mapsApiKey={getGoogleMapsPublicKey() ?? null}
         />
