@@ -68,5 +68,9 @@ export default async function IniciarRutaPage({ params }: Props) {
     redirect(`/panel/mis-rutas/${id}`);
   }
 
+  if (ruta.estado === "suspendida") {
+    redirect(`/panel/mis-rutas/${id}`);
+  }
+
   return <RecolectorInicioRutaForm rutaId={ruta.id} rutaNombre={ruta.nombre} />;
 }

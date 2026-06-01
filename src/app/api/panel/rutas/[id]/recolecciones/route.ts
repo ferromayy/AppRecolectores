@@ -36,7 +36,7 @@ export async function POST(request: Request, { params }: Props) {
 
   const { data: ruta, error: rutaError } = await admin
     .from("rutas")
-    .select("id, fecha")
+    .select("id, fecha, estado")
     .eq("id", rutaId)
     .maybeSingle();
 
@@ -46,6 +46,13 @@ export async function POST(request: Request, { params }: Props) {
 
   if (!ruta) {
     return NextResponse.json({ ok: false, error: "Ruta no encontrada" }, { status: 404 });
+  }
+
+  if (ruta.estado === "completada") {
+    return NextResponse.json(
+      { ok: false, error: "No se puede agregar una recolección a una ruta finalizada" },
+      { status: 409 },
+    );
   }
 
   const { data: duplicate } = await admin
@@ -81,6 +88,11 @@ export async function POST(request: Request, { params }: Props) {
       direccion: parsed.data.direccion,
       telefono: parsed.data.telefono,
       telefono_normalizado: parsed.data.telefono_normalizado,
+      unidad: parsed.data.unidad,
+      tipo_servicio: parsed.data.tipo_servicio,
+      frecuencia: parsed.data.frecuencia,
+      precio: parsed.data.precio,
+      deuda: parsed.data.deuda,
       zona: parsed.data.zona,
       barrio: parsed.data.barrio,
       depto: parsed.data.depto,

@@ -1,6 +1,7 @@
 "use client";
 
 import Link from "next/link";
+import { useRouter } from "next/navigation";
 import { useMemo, useState } from "react";
 
 import { RecolectorRecoleccionSheet } from "@/components/panel/recolector/recolector-recoleccion-sheet";
@@ -13,6 +14,7 @@ import {
   type RecolectorRecoleccionPreview,
   type RecolectorRutaDetalle,
 } from "@/lib/domain/recolector-ruta";
+import { mensajeBloqueoSuspension } from "@/lib/domain/ruta-estado-transiciones";
 
 type Props = {
   ruta: RecolectorRutaDetalle;
@@ -26,6 +28,7 @@ const ESTADO_BADGE: Record<string, string> = {
   "En proceso": "bg-amber-100 text-amber-900 dark:bg-amber-950 dark:text-amber-300",
   Finalizada: "bg-emerald-100 text-emerald-800 dark:bg-emerald-950 dark:text-emerald-300",
   Cancelada: "bg-red-100 text-red-800 dark:bg-red-950 dark:text-red-300",
+  Suspendida: "bg-orange-100 text-orange-900 dark:bg-orange-950 dark:text-orange-300",
 };
 
 export function RecolectorRutaDetalle({
@@ -34,8 +37,10 @@ export function RecolectorRutaDetalle({
   recoleccionesDetalle,
   direccionesMaps,
 }: Props) {
+  const router = useRouter();
   const [error, setError] = useState<string | null>(null);
   const [selectedId, setSelectedId] = useState<string | null>(null);
+  const [finalizando, setFinalizando] = useState(false);
 
   const mapsUrl = useMemo(
     () => buildGoogleMapsDirectionsUrl(direccionesMaps),
@@ -52,6 +57,23 @@ export function RecolectorRutaDetalle({
     window.open(mapsUrl, "_blank", "noopener,noreferrer");
   }
 
+  async function handleFinalizarRuta() {
+    if (!ruta.puedeFinalizar || finalizando) return;
+
+    setFinalizando(true);
+    setError(null);
+    router.push(`/panel/mis-rutas/${ruta.id}/finalizar`);
+  }
+
+  const mostrarFinalizar = (ruta.rutaIniciada || ruta.rutaFinalizada) && !ruta.rutaSuspendida;
+  const finalizarDisabled = !ruta.puedeFinalizar || finalizando;
+  const motivoFinalizar =
+    finalizando
+      ? "Procesando…"
+      : !ruta.puedeFinalizar
+        ? (ruta.mensajeFinalizar ?? "No se puede finalizar la ruta")
+        : null;
+
   return (
     <div className="space-y-5 pb-4">
       <Link
@@ -60,6 +82,12 @@ export function RecolectorRutaDetalle({
       >
         ← Volver a mis rutas
       </Link>
+
+      {ruta.rutaSuspendida && (
+        <p className="rounded-2xl border border-orange-200 bg-orange-50 p-4 text-sm text-orange-900 dark:border-orange-900 dark:bg-orange-950/40 dark:text-orange-200">
+          {mensajeBloqueoSuspension()}
+        </p>
+      )}
 
       <div className="rounded-2xl border border-zinc-200 bg-white p-5 dark:border-zinc-800 dark:bg-zinc-900">
         <p className="text-xs font-medium uppercase tracking-wider text-emerald-700 dark:text-emerald-400">
@@ -88,7 +116,11 @@ export function RecolectorRutaDetalle({
           <DetailRow label="Total efectivo" value={formatRecolectorMoney(ruta.totalEfectivo)} />
           {ruta.rutaIniciada && (
             <>
-              <DetailRow label="Inicio jornada" value={formatInicioJornada(ruta.inicioJornadaAt)} />
+              <DetailRow
+                label="Inicio jornada"
+                value={formatInicioJornada(ruta.inicioJornadaAt)}
+                suppressHydrationWarning
+              />
               <DetailRow label="Km iniciales" value={formatKm(ruta.kmInicial)} />
               <DetailRow label="Insumos" value={ruta.insumosResumen} />
             </>
@@ -116,13 +148,17 @@ export function RecolectorRutaDetalle({
             disabled
             className="flex min-h-[3.25rem] flex-col items-center justify-center rounded-2xl bg-emerald-700 px-3 text-center text-sm font-semibold text-white opacity-50"
           >
-            {ruta.rutaIniciada ? "Ruta iniciada" : "Inicio de ruta"}
+            {ruta.rutaSuspendida
+              ? "Ruta suspendida"
+              : ruta.rutaIniciada
+                ? "Ruta iniciada"
+                : "Inicio de ruta"}
           </button>
         )}
         <button
           type="button"
           onClick={handleMaps}
-          disabled={!mapsUrl}
+          disabled={!mapsUrl || ruta.rutaSuspendida}
           className="flex min-h-[3.25rem] flex-col items-center justify-center rounded-2xl border border-blue-200 bg-blue-50 px-3 text-center text-sm font-semibold text-blue-800 active:bg-blue-100 disabled:cursor-not-allowed disabled:opacity-50 dark:border-blue-900 dark:bg-blue-950 dark:text-blue-300 dark:active:bg-blue-900"
         >
           Maps
@@ -144,7 +180,8 @@ export function RecolectorRutaDetalle({
         ) : (
           <ol className="space-y-3">
             {recoleccionesPreview.map((item) => {
-              const completada = ["Visitada", "Cancelada", "Omitida"].includes(item.estadoLabel);
+              const completada = ["Visitada", "Cancelada"].includes(item.estadoLabel);
+              const puedeEditarCarga = ruta.rutaIniciada && !ruta.rutaFinalizada && !ruta.rutaSuspendida;
               const cardContent = (
                 <>
                   <div className="flex gap-3">
@@ -177,11 +214,13 @@ export function RecolectorRutaDetalle({
                           </span>
                         )}
                         <span className="text-xs font-medium text-emerald-700 dark:text-emerald-400">
-                          {ruta.rutaIniciada
+                          {puedeEditarCarga
                             ? completada
                               ? "Editar carga →"
                               : "Cargar en campo →"
-                            : "Ver detalle →"}
+                            : ruta.rutaFinalizada
+                              ? "Ver carga →"
+                              : "Ver detalle →"}
                         </span>
                       </div>
                     </div>
@@ -189,7 +228,7 @@ export function RecolectorRutaDetalle({
                 </>
               );
 
-              if (ruta.rutaIniciada) {
+              if (puedeEditarCarga || (ruta.rutaFinalizada && completada)) {
                 return (
                   <li key={item.id}>
                     <Link
@@ -218,6 +257,31 @@ export function RecolectorRutaDetalle({
         )}
       </section>
 
+      {mostrarFinalizar && (
+        <section className="space-y-2">
+          {ruta.rutaFinalizada ? (
+            <div className="flex min-h-[3.25rem] items-center justify-center rounded-2xl border border-emerald-200 bg-emerald-50 px-4 text-center text-sm font-semibold text-emerald-800 dark:border-emerald-900 dark:bg-emerald-950 dark:text-emerald-300">
+              Ruta finalizada
+            </div>
+          ) : (
+            <>
+              <button
+                type="button"
+                onClick={handleFinalizarRuta}
+                disabled={finalizarDisabled}
+                title={motivoFinalizar ?? undefined}
+                className="flex min-h-[3.25rem] w-full items-center justify-center rounded-2xl bg-zinc-900 px-4 text-base font-semibold text-white active:bg-zinc-800 disabled:cursor-not-allowed disabled:opacity-50 dark:bg-zinc-100 dark:text-zinc-900 dark:active:bg-zinc-200"
+              >
+                {finalizando ? "Finalizando ruta…" : "Finalizar ruta"}
+              </button>
+              {motivoFinalizar && (
+                <p className="text-center text-xs text-zinc-500">{motivoFinalizar}</p>
+              )}
+            </>
+          )}
+        </section>
+      )}
+
       <RecolectorRecoleccionSheet
         open={selectedId !== null}
         recoleccion={selectedRecoleccion}
@@ -227,11 +291,24 @@ export function RecolectorRutaDetalle({
   );
 }
 
-function DetailRow({ label, value }: { label: string; value: string }) {
+function DetailRow({
+  label,
+  value,
+  suppressHydrationWarning = false,
+}: {
+  label: string;
+  value: string;
+  suppressHydrationWarning?: boolean;
+}) {
   return (
     <div className="flex justify-between gap-4">
       <dt className="shrink-0 text-zinc-500">{label}</dt>
-      <dd className="text-right font-medium text-zinc-900 dark:text-zinc-50">{value}</dd>
+      <dd
+        className="text-right font-medium text-zinc-900 dark:text-zinc-50"
+        suppressHydrationWarning={suppressHydrationWarning}
+      >
+        {value}
+      </dd>
     </div>
   );
 }

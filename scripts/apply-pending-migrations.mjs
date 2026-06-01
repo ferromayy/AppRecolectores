@@ -16,6 +16,7 @@ const MIGRATION_FILES = [
   "20260524120000_rutas_inicio_insumos.sql",
   "20260524130000_recoleccion_campo_campos.sql",
   "20260524140000_fix_missing_operativo_columns.sql",
+  "20260525120000_sistema_parametros_precio.sql",
 ];
 
 function loadEnv() {

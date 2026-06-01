@@ -16,6 +16,8 @@ Guía para usuarios de la app **sin conocimientos de programación**. Explica qu
 6. [Planilla Google Sheets](#6-planilla-google-sheets)
 7. [Problemas frecuentes](#7-problemas-frecuentes)
 
+**Novedades recientes:** finalizar ruta, suspensión de rutas, parámetros de precio de bolsa extra, Mis rutas agrupadas por estado.
+
 ---
 
 ## 1. Acceso a la app
@@ -45,12 +47,14 @@ Guía para usuarios de la app **sin conocimientos de programación**. Explica qu
 | Función | Superadmin | Operario (admin) | Recolector |
 |---------|:----------:|:----------------:|:----------:|
 | Ver panel operativo (rutas, mapas, recolecciones) | ✅ | ✅ | ❌ |
+| Configurar **precio de bolsa extra** | ✅ | ✅ | ❌ |
+| Suspender / reactivar rutas | ✅ | ✅ | ❌ |
 | Crear usuarios **operario** | ✅ | ❌ | ❌ |
 | Crear usuarios **recolector** | ✅ | ✅ | ❌ |
 | Cambiar contraseña de operarios | ✅ | ❌ | ❌ |
 | Cambiar contraseña de recolectores | ✅ | ✅ | ❌ |
 | Ver y ejecutar **mis rutas** en el celular | ❌ | ❌ | ✅ |
-| Iniciar ruta, cargar paradas, cobrar | ❌ | ❌ | ✅ |
+| Iniciar ruta, cargar paradas, cobrar, finalizar ruta | ❌ | ❌ | ✅ |
 
 **Operario** y **Superadmin** comparten el mismo panel de seguimiento. La diferencia principal está en la **gestión de usuarios**.
 
@@ -70,7 +74,7 @@ Lista todas las rutas importadas o creadas. Cada fila muestra, entre otros datos
 
 - Fecha y turno (Mañana / Tarde)
 - Recolector asignado
-- Estado (Pendiente, En proceso, Finalizada…)
+- Estado (Pendiente, En proceso, Realizado, Suspendida…)
 - Cantidad de paradas
 - Kilómetros, inicio/cierre de jornada, total recaudado
 
@@ -79,9 +83,10 @@ Lista todas las rutas importadas o creadas. Cada fila muestra, entre otros datos
 | Botón | Qué hace |
 |-------|----------|
 | Seleccionar fila | Muestra sus recolecciones abajo |
-| **Ver detalle** | Resumen completo de la ruta |
+| **Ver detalle** | Resumen completo de la ruta (incluye **Suspender** o **Reactivar** según el estado) |
 | **Ver mapa** | Mapa con direcciones geocodificadas |
 | **Editar** | Cambiar nombre, fecha, turno, estado, recolector, observaciones |
+| **Suspender** | Pausa la ruta: el recolector no puede operarla hasta reactivarla |
 | **Eliminar** | Borra la ruta y todas sus paradas (acción irreversible) |
 
 #### Tabla **Recolecciones**
@@ -104,7 +109,40 @@ Muestra las paradas de la **ruta seleccionada** arriba.
 
 Los marcadores se colorean por **zona** cuando está disponible.
 
-### 3.3 Gestión de usuarios
+### 3.4 Suspender y reactivar una ruta
+
+Usá **Suspender** cuando una ruta no debe ejecutarse temporalmente (clima, vehículo, cambio de planificación, etc.).
+
+**Suspender:**
+
+1. En la tabla de rutas, tocá **Suspender** (solo visible si la ruta está pendiente o en proceso)
+2. O abrí **Ver detalle** y tocá **Suspender ruta**
+3. Confirmá la acción
+
+**Qué pasa al suspender:**
+
+- La ruta pasa a estado **Suspendida**
+- El recolector la ve en la sección **Suspendidas** de Mis rutas
+- No puede iniciarla, abrir Maps, cargar paradas ni finalizarla
+
+**Reactivar:**
+
+1. Abrí **Ver detalle** de una ruta suspendida
+2. Tocá **Reactivar ruta** y confirmá
+3. Vuelve a estar disponible para el recolector (como pendiente o en proceso, según si ya había iniciado la jornada)
+
+### 3.5 Parámetros de sistema
+
+Menú **Parámetros** (arriba) → `/panel/parametros`
+
+Desde acá configurás el **precio de bolsa extra**, que usa el recolector al calcular cuánto cobrar en cada parada.
+
+- Las **2 primeras bolsas llenas** están incluidas en el precio de retiro de la planilla
+- A partir de la **3.ª bolsa llena**, se suma el precio de bolsa extra por cada una adicional
+- Solo podés **agregar un precio nuevo** (no editar los anteriores); queda historial con fecha de vigencia
+- El precio vigente se aplica automáticamente en la app del recolector
+
+### 3.6 Gestión de usuarios
 
 Menú **Usuarios** (arriba) → `/panel/usuarios`
 
@@ -125,7 +163,7 @@ Menú **Usuarios** (arriba) → `/panel/usuarios`
 - Puede resetear contraseña de operarios y recolectores
 - **No** puede cambiar la contraseña del superadmin desde este panel (usa recuperación por correo)
 
-### 3.4 Tareas de configuración (una vez)
+### 3.7 Tareas de configuración (una vez)
 
 Estas tareas las hace normalmente el superadmin o alguien técnico al inicio:
 
@@ -135,6 +173,7 @@ Estas tareas las hace normalmente el superadmin o alguien técnico al inicio:
 | Configurar planilla Google Sheets | Ver sección 6 |
 | Configurar mapas de Google | Documentación técnica interna |
 | Crear operarios y recolectores | Usuarios en la app |
+| Definir precio de bolsa extra | Parámetros en la app |
 
 ---
 
@@ -150,8 +189,18 @@ El operario usa el **mismo panel operativo** que el superadmin para seguir rutas
 4. Si hace falta corregir datos → **Editar** ruta o recolección
 5. Para planificar el recorrido → **Ver mapa** y reordenar paradas
 6. Seguí el avance: estados de ruta y de cada parada se actualizan cuando el recolector carga en campo
+7. Si hace falta pausar una jornada → **Suspender** la ruta
+8. Revisá **Parámetros** cuando cambie el precio de bolsa extra
 
-### 4.2 Editar una ruta
+### 4.2 Suspender una ruta
+
+Mismo flujo que superadmin (sección 3.4): botón **Suspender** en la tabla o en **Ver detalle**. Solo disponible en rutas pendientes o en proceso.
+
+### 4.3 Parámetros de precio
+
+Menú **Parámetros** → agregar nuevo **precio de bolsa extra** cuando el valor cambie. El historial queda registrado con fechas de vigencia.
+
+### 4.4 Editar una ruta
 
 Desde **Editar** en la tabla de rutas podés modificar:
 
@@ -163,7 +212,9 @@ Desde **Editar** en la tabla de rutas podés modificar:
 - Observaciones del operario
 - Kilómetros recorridos (cuando corresponda)
 
-### 4.3 Editar o agregar una recolección
+También podés cambiar el estado manualmente desde **Editar** (incluido **Suspendida**), aunque lo recomendado es usar el botón **Suspender** / **Reactivar**.
+
+### 4.5 Editar o agregar una recolección
 
 Desde la tabla de recolecciones:
 
@@ -171,7 +222,7 @@ Desde la tabla de recolecciones:
 - **Agregar:** crear una parada nueva en la ruta seleccionada
 - **Eliminar:** quitar una parada incorrecta
 
-### 4.4 Gestión de usuarios (solo recolectores)
+### 4.6 Gestión de usuarios (solo recolectores)
 
 El operario puede:
 
@@ -194,8 +245,10 @@ Barra inferior con dos pestañas:
 
 | Pestaña | Contenido |
 |---------|-----------|
-| **Inicio** | Saludo + rutas de **hoy** + acceso rápido |
-| **Mis rutas** | Todas tus rutas asignadas, agrupadas por **Mañana**, **Tarde** o sin turno |
+| **Inicio** | Saludo + rutas **activas de hoy** + acceso rápido |
+| **Mis rutas** | Todas tus rutas, agrupadas en **Activas**, **Completadas** y **Suspendidas** |
+
+Dentro de cada sección, las rutas se ordenan por fecha (más recientes arriba). En cada tarjeta ves fecha, turno y estado.
 
 ### 5.2 Ver una ruta
 
@@ -205,6 +258,8 @@ Barra inferior con dos pestañas:
    - Efectivo recaudado (si hay cargas)
    - Km iniciales e insumos (después de iniciar)
    - Lista de **recolecciones** en orden
+
+Si la ruta está **Suspendida**, verás un aviso y no podrás operarla hasta que el operario la reactive.
 
 ### 5.3 Iniciar la ruta (obligatorio antes de cargar paradas)
 
@@ -221,7 +276,7 @@ Barra inferior con dos pestañas:
 
 ### 5.4 Abrir Maps (navegación)
 
-En el detalle de ruta, tocá **Maps**. Se abre Google Maps con las direcciones de las paradas **en el orden de la ruta**.
+En el detalle de ruta, tocá **Maps**. Se abre Google Maps con las direcciones de las paradas **pendientes** (las ya visitadas o canceladas no se incluyen), en el orden de la ruta.
 
 No necesitás configurar nada: usa la app de Maps del teléfono.
 
@@ -256,32 +311,51 @@ No hace falta completar bolsas ni pagos.
    - Biotachos llenos
    - Bolsas nuevas
    - Biotachos nuevos
-2. Revisá el **Precio de retiro** y el **Precio total a cobrar** (por ahora son iguales)
-3. Completá **uno o más** montos de pago:
+2. Revisá el **Precio de retiro** y el **Precio total a cobrar**:
+   - El retiro viene de la planilla (precio base del servicio)
+   - Si cargás **más de 2 bolsas llenas**, se suma el **precio de bolsa extra** por cada bolsa adicional (el valor lo define el operario en Parámetros)
+   - El desglose se actualiza al cambiar la cantidad de bolsas llenas
+3. Completá los **tres montos** (todos obligatorios; efectivo, transferencia y QR pueden ser **0**):
    - Monto efectivo
    - Monto transferencia
    - Monto QR
-   - Cada monto, si se completa, debe ser al menos 1
-   - **La suma de los montos debe ser igual al total a cobrar**
+   - **La suma de los tres no puede ser menor al total a cobrar** (puede ser mayor)
 4. **Nombre del firmante** (obligatorio)
 5. Marcá **Confirmo la firma del cliente**
 6. Tocá **Guardar recolección** → la parada queda como **Visitada**
 
 #### Editar una parada ya cargada
 
-Las paradas visitadas o canceladas muestran **Editar carga →**. Podés volver a entrar y actualizar los datos.
+Las paradas visitadas o canceladas muestran **Editar carga →**. Podés volver a entrar y actualizar los datos mientras la ruta siga en proceso y no esté suspendida.
 
-### 5.6 Resumen del flujo del recolector
+### 5.6 Finalizar la ruta
+
+Cuando terminaste todas las paradas del día:
+
+1. Volvé al **Detalle de ruta**
+2. Verificá que **todas** las recolecciones estén **Visitadas** o **Canceladas** (si falta alguna, el botón queda deshabilitado)
+3. Tocá **Finalizar ruta** y confirmá
+
+**Qué pasa al finalizar:**
+
+- La ruta pasa a **Completada**
+- Ya no podés cargar ni editar paradas
+- La app te lleva al **Inicio** (dashboard)
+- La ruta aparece en la sección **Completadas** de Mis rutas
+
+### 5.7 Resumen del flujo del recolector
 
 ```
 Login
-  → Mis rutas (o Inicio si hay rutas hoy)
+  → Mis rutas (Activas / Completadas / Suspendidas)
     → Detalle de ruta
       → Inicio de ruta (km + insumos)     ← una vez por jornada
-      → Maps (navegación)
+      → Maps (navegación a paradas pendientes)
       → Por cada parada:
           → Cargar en campo (retiro + cobro + firma)
           → o Cancelar con motivo
+      → Finalizar ruta                    ← cuando todas las paradas están listas
+        → Vuelta al Inicio
 ```
 
 ---
@@ -341,7 +415,18 @@ Documentación técnica de la integración: [SHEETS_INTEGRATION.md](./SHEETS_INT
 ### Soy recolector y no veo rutas
 
 - Las rutas deben estar **asignadas a tu email** en la planilla (columna Recolector) o en el panel operario
-- Verificá la **fecha** — en Inicio solo aparecen las de hoy; en Mis rutas están todas
+- Verificá la **fecha** — en Inicio solo aparecen las **activas de hoy**; en Mis rutas están todas (Activas, Completadas, Suspendidas)
+
+### Mi ruta aparece como Suspendida
+
+- El operario la pausó desde el panel. No podés iniciarla ni cargar paradas
+- Contactá al operario para que la reactive desde Ver detalle
+
+### No aparece el botón Finalizar ruta
+
+- Todas las paradas deben estar **Visitadas** o **Canceladas**
+- La ruta debe estar **iniciada** (en proceso)
+- Si está **suspendida**, primero tiene que reactivarla el operario
 
 ### “Inicio de ruta” no guarda / error de columnas
 
@@ -351,7 +436,8 @@ Documentación técnica de la integración: [SHEETS_INTEGRATION.md](./SHEETS_INT
 ### No puedo cargar una parada
 
 - ¿Iniciaste la ruta? Sin inicio de ruta solo podés **ver** el detalle, no cargar
-- Revisá que la suma de pagos sea **igual al total**
+- ¿La ruta está **suspendida**? Avisá al operario
+- Revisá que la suma de pagos **no sea menor** al total (puede ser mayor)
 - Si cancelás, solo necesitás motivo + firmante + firma
 
 ### El mapa del operario no carga
@@ -380,10 +466,13 @@ Documentación técnica de la integración: [SHEETS_INTEGRATION.md](./SHEETS_INT
 | **Recolección / parada** | Visita a un cliente (dirección, hora, precio) |
 | **Turno** | Mañana (antes de 12:00) o Tarde (desde 12:00) |
 | **Inicio de ruta** | Registro de km y insumos al comenzar la jornada |
+| **Finalizar ruta** | Cierre de la jornada cuando todas las paradas están visitadas o canceladas |
+| **Ruta suspendida** | Pausada por el operario; el recolector no puede operarla |
+| **Bolsa extra** | Cobro adicional por cada bolsa llena por encima de las 2 incluidas en el retiro |
 | **Carga en campo** | Datos que el recolector carga en cada parada |
 | **Operario** | Persona de backoffice que supervisa y edita rutas |
 | **Superadmin** | Administrador principal con acceso total |
 
 ---
 
-*Manual actualizado con las funcionalidades disponibles a la fecha. Para detalles técnicos de instalación y desarrollo, ver [GUIA_DESARROLLADORES.md](./GUIA_DESARROLLADORES.md).*
+*Manual actualizado con las funcionalidades disponibles a mayo 2026 (finalizar ruta, suspensión de rutas, parámetros de bolsa extra). Para detalles técnicos de instalación y desarrollo, ver [GUIA_DESARROLLADORES.md](./GUIA_DESARROLLADORES.md).*

@@ -1,6 +1,10 @@
 import Link from "next/link";
 
 import {
+  getCategoriaSections,
+  groupRutasByCategoriaRecolector,
+} from "@/lib/domain/recolector-rutas-list";
+import {
   formatRutaEstado,
   formatRutaFecha,
   formatRutaTurno,
@@ -14,6 +18,7 @@ type Props = {
   rutas: RutaRow[];
   compact?: boolean;
   groupByTurno?: boolean;
+  groupByCategoria?: boolean;
 };
 
 const ESTADO_COLORS: Record<string, string> = {
@@ -22,6 +27,7 @@ const ESTADO_COLORS: Record<string, string> = {
   completada: "bg-zinc-200 text-zinc-700 dark:bg-zinc-800 dark:text-zinc-300",
   borrador: "bg-zinc-100 text-zinc-600 dark:bg-zinc-900 dark:text-zinc-400",
   cancelada: "bg-red-100 text-red-800 dark:bg-red-950 dark:text-red-300",
+  suspendida: "bg-orange-100 text-orange-900 dark:bg-orange-950 dark:text-orange-300",
 };
 
 const TURNO_SECTIONS = [
@@ -30,7 +36,12 @@ const TURNO_SECTIONS = [
   { key: "sinTurno" as const, label: "Sin turno", icon: "📋" },
 ];
 
-export function MisRutasCards({ rutas, compact = false, groupByTurno = false }: Props) {
+export function MisRutasCards({
+  rutas,
+  compact = false,
+  groupByTurno = false,
+  groupByCategoria = false,
+}: Props) {
   if (rutas.length === 0) {
     return (
       <div className="rounded-2xl border border-dashed border-zinc-300 bg-white p-8 text-center dark:border-zinc-700 dark:bg-zinc-900">
@@ -43,6 +54,36 @@ export function MisRutasCards({ rutas, compact = false, groupByTurno = false }: 
         <p className="mt-1 text-sm text-zinc-500">
           Cuando el admin te asigne una ruta, aparecerá acá.
         </p>
+      </div>
+    );
+  }
+
+  if (groupByCategoria) {
+    const grouped = groupRutasByCategoriaRecolector(rutas);
+    const sections = getCategoriaSections(grouped);
+
+    return (
+      <div className={`space-y-6 ${compact ? "" : "pb-2"}`}>
+        {sections.map(({ key, label, icon }) => (
+          <section key={key} className="space-y-3">
+            <div className="flex items-center gap-2 px-0.5">
+              <span className="text-base leading-none" aria-hidden>
+                {icon}
+              </span>
+              <h2 className="text-sm font-semibold uppercase tracking-wide text-zinc-600 dark:text-zinc-400">
+                {label}
+              </h2>
+              <span className="rounded-full bg-zinc-200 px-2 py-0.5 text-xs font-medium text-zinc-700 dark:bg-zinc-800 dark:text-zinc-300">
+                {grouped[key].length}
+              </span>
+            </div>
+            <ul className="space-y-3">
+              {grouped[key].map((ruta) => (
+                <RutaCard key={ruta.id} ruta={ruta} compact={compact} showTurno />
+              ))}
+            </ul>
+          </section>
+        ))}
       </div>
     );
   }

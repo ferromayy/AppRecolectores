@@ -6,6 +6,7 @@ import {
   formatTurno,
   type RutaOperarioRow,
 } from "@/lib/domain/operario-dashboard";
+import { puedeSuspenderRuta } from "@/lib/domain/ruta-estado-transiciones";
 
 type Props = {
   rutas: RutaOperarioRow[];
@@ -14,6 +15,7 @@ type Props = {
   onVerDetalle: (id: string) => void;
   onVerMapa: (id: string) => void;
   onEditar: (id: string) => void;
+  onSuspender: (id: string) => void;
   mapsDisponible: boolean;
 };
 
@@ -24,6 +26,7 @@ export function OperarioRutasTable({
   onVerDetalle,
   onVerMapa,
   onEditar,
+  onSuspender,
   mapsDisponible,
 }: Props) {
   if (rutas.length === 0) {
@@ -83,13 +86,19 @@ export function OperarioRutasTable({
                   {ruta.km_recorridos != null ? ruta.km_recorridos : "—"}
                 </td>
                 <td className="whitespace-nowrap px-3 py-2.5 text-zinc-600">
-                  {formatDateTime(ruta.inicio_jornada_at)}
+                  <span suppressHydrationWarning>
+                    {formatDateTime(ruta.inicio_jornada_at)}
+                  </span>
                 </td>
                 <td className="whitespace-nowrap px-3 py-2.5 text-zinc-600">
-                  {formatDateTime(ruta.cierre_recolector_at)}
+                  <span suppressHydrationWarning>
+                    {formatDateTime(ruta.cierre_recolector_at)}
+                  </span>
                 </td>
                 <td className="whitespace-nowrap px-3 py-2.5 text-zinc-600">
-                  {formatDateTime(ruta.cierre_operario_at)}
+                  <span suppressHydrationWarning>
+                    {formatDateTime(ruta.cierre_operario_at)}
+                  </span>
                 </td>
                 <td className="whitespace-nowrap px-3 py-2.5 text-right font-medium">
                   {formatMoney(ruta.total_recaudado)}
@@ -124,16 +133,30 @@ export function OperarioRutasTable({
                   </button>
                 </td>
                 <td className="px-3 py-2.5 text-center">
-                  <button
-                    type="button"
-                    onClick={(e) => {
-                      e.stopPropagation();
-                      onEditar(ruta.id);
-                    }}
-                    className="rounded-lg border border-zinc-200 bg-white px-2.5 py-1 text-xs font-medium text-zinc-700 hover:bg-zinc-50 dark:border-zinc-700 dark:bg-zinc-900 dark:text-zinc-200 dark:hover:bg-zinc-800"
-                  >
-                    Editar
-                  </button>
+                  <div className="flex flex-wrap items-center justify-center gap-1.5">
+                    <button
+                      type="button"
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        onEditar(ruta.id);
+                      }}
+                      className="rounded-lg border border-zinc-200 bg-white px-2.5 py-1 text-xs font-medium text-zinc-700 hover:bg-zinc-50 dark:border-zinc-700 dark:bg-zinc-900 dark:text-zinc-200 dark:hover:bg-zinc-800"
+                    >
+                      Editar
+                    </button>
+                    {puedeSuspenderRuta(ruta.estado) && (
+                      <button
+                        type="button"
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          onSuspender(ruta.id);
+                        }}
+                        className="rounded-lg border border-orange-200 bg-orange-50 px-2.5 py-1 text-xs font-medium text-orange-800 hover:bg-orange-100 dark:border-orange-900 dark:bg-orange-950 dark:text-orange-300 dark:hover:bg-orange-900"
+                      >
+                        Suspender
+                      </button>
+                    )}
+                  </div>
                 </td>
               </tr>
             );

@@ -1,3 +1,5 @@
+import { calcPrecioTotalCobrar } from "@/lib/domain/sistema-parametros";
+
 function str(value: unknown): string {
   if (value === null || value === undefined) return "";
   return String(value).trim();
@@ -10,10 +12,10 @@ function parseOptionalCount(value: unknown): number | null {
   return n;
 }
 
-function parseOptionalPayment(value: unknown): number | null {
+function parseRequiredPayment(value: unknown): number | null {
   if (value === null || value === undefined || value === "") return null;
   const n = typeof value === "number" ? value : Number(String(value).replace(",", "."));
-  if (!Number.isFinite(n) || n < 1) return null;
+  if (!Number.isFinite(n) || n < 0) return null;
   return n;
 }
 
@@ -42,6 +44,7 @@ export type RecoleccionCampoPayload = {
 export function parseRecoleccionCampoBody(
   body: Record<string, unknown>,
   precioRetiro: number,
+  precioBolsaExtra = 0,
 ): { ok: true; data: RecoleccionCampoPayload } | { ok: false; error: string } {
   const motivo_cancelacion = str(body.motivo_cancelacion) || null;
   const nombre_firmante = str(body.nombre_firmante);
@@ -94,28 +97,24 @@ export function parseRecoleccionCampoBody(
     };
   }
 
-  const precio_total = precioRetiro;
-  const monto_efectivo = parseOptionalPayment(body.monto_efectivo);
-  const monto_transferencia = parseOptionalPayment(body.monto_transferencia);
-  const monto_qr = parseOptionalPayment(body.monto_qr);
+  const precio_total = calcPrecioTotalCobrar(precioRetiro, precioBolsaExtra, bolsas_llenas);
+  const monto_efectivo = parseRequiredPayment(body.monto_efectivo);
+  const monto_transferencia = parseRequiredPayment(body.monto_transferencia);
+  const monto_qr = parseRequiredPayment(body.monto_qr);
 
-  const pagos = [monto_efectivo, monto_transferencia, monto_qr].filter(
-    (v): v is number => v != null,
-  );
-
-  if (pagos.length === 0) {
+  if (monto_efectivo === null || monto_transferencia === null || monto_qr === null) {
     return {
       ok: false,
-      error: "Completá al menos un monto (efectivo, transferencia o QR)",
+      error: "Completá efectivo, transferencia y QR (podés poner 0 en los que no apliquen)",
     };
   }
 
-  const sumaPagos = pagos.reduce((acc, n) => acc + n, 0);
+  const sumaPagos = monto_efectivo + monto_transferencia + monto_qr;
 
-  if (Math.abs(sumaPagos - precio_total) > 0.01) {
+  if (sumaPagos + 0.01 < precio_total) {
     return {
       ok: false,
-      error: `La suma de los pagos (${sumaPagos}) debe coincidir con el total a cobrar (${precio_total})`,
+      error: `La suma de los pagos (${sumaPagos}) no puede ser menor al total a cobrar (${precio_total})`,
     };
   }
 

@@ -23,7 +23,8 @@ export type RutaEstado =
   | "activa"
   | "en_curso"
   | "completada"
-  | "cancelada";
+  | "cancelada"
+  | "suspendida";
 
 export type RutaTurno = "manana" | "tarde";
 
@@ -164,6 +165,13 @@ export type Database = {
           km_inicial: number | null;
           insumos_inicio: Json;
           km_recorridos: number | null;
+          km_final: number | null;
+          descarga: boolean;
+          combustible: number | null;
+          descuento: number | null;
+          otros_gastos: number | null;
+          total_efectivo: number | null;
+          observaciones_recolector: string | null;
           inicio_jornada_at: string | null;
           cierre_recolector_at: string | null;
           cierre_operario_at: string | null;
@@ -191,6 +199,13 @@ export type Database = {
           km_inicial?: number | null;
           insumos_inicio?: Json;
           km_recorridos?: number | null;
+          km_final?: number | null;
+          descarga?: boolean;
+          combustible?: number | null;
+          descuento?: number | null;
+          otros_gastos?: number | null;
+          total_efectivo?: number | null;
+          observaciones_recolector?: string | null;
           inicio_jornada_at?: string | null;
           cierre_recolector_at?: string | null;
           cierre_operario_at?: string | null;
@@ -218,6 +233,13 @@ export type Database = {
           km_inicial?: number | null;
           insumos_inicio?: Json;
           km_recorridos?: number | null;
+          km_final?: number | null;
+          descarga?: boolean;
+          combustible?: number | null;
+          descuento?: number | null;
+          otros_gastos?: number | null;
+          total_efectivo?: number | null;
+          observaciones_recolector?: string | null;
           inicio_jornada_at?: string | null;
           cierre_recolector_at?: string | null;
           cierre_operario_at?: string | null;
@@ -405,6 +427,36 @@ export type Database = {
           nombre_firmante?: string | null;
           created_at?: string;
           updated_at?: string;
+        };
+        Relationships: [];
+      };
+      sistema_precio_historial: {
+        Row: {
+          id: string;
+          clave: string;
+          precio: number;
+          vigencia_desde: string;
+          vigencia_hasta: string | null;
+          created_by: string | null;
+          created_at: string;
+        };
+        Insert: {
+          id?: string;
+          clave: string;
+          precio: number;
+          vigencia_desde: string;
+          vigencia_hasta?: string | null;
+          created_by?: string | null;
+          created_at?: string;
+        };
+        Update: {
+          id?: string;
+          clave?: string;
+          precio?: number;
+          vigencia_desde?: string;
+          vigencia_hasta?: string | null;
+          created_by?: string | null;
+          created_at?: string;
         };
         Relationships: [];
       };

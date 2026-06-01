@@ -1,7 +1,9 @@
 import { NextResponse } from "next/server";
 
 import { requireAuth } from "@/lib/auth/session";
+import { fetchPrecioBolsaExtraActivo } from "@/lib/data/sistema-parametros";
 import { parsePrecioRetiro, parseRecoleccionCampoBody } from "@/lib/domain/recolector-recoleccion-campo";
+import { getInicioJornadaAt } from "@/lib/domain/recolector-ruta";
 import { createAdminClient } from "@/lib/supabase/admin";
 import type { Database } from "@/types/database";
 
@@ -38,7 +40,7 @@ export async function PATCH(request: Request, { params }: Props) {
 
   const { data: ruta, error: rutaError } = await admin
     .from("rutas")
-    .select("id, asignado_a, estado")
+    .select("id, asignado_a, estado, inicio_jornada_at, metadata")
     .eq("id", rutaId)
     .maybeSingle();
 
@@ -50,7 +52,24 @@ export async function PATCH(request: Request, { params }: Props) {
     return NextResponse.json({ ok: false, error: "Ruta no encontrada" }, { status: 404 });
   }
 
-  if (ruta.estado !== "en_curso") {
+  if (ruta.estado === "suspendida") {
+    return NextResponse.json(
+      { ok: false, error: "Esta ruta está suspendida" },
+      { status: 403 },
+    );
+  }
+
+  if (ruta.estado === "completada" || ruta.estado === "cancelada") {
+    return NextResponse.json(
+      { ok: false, error: "No se puede cargar una ruta finalizada o cancelada" },
+      { status: 400 },
+    );
+  }
+
+  const inicioJornadaAt = getInicioJornadaAt(ruta);
+  const rutaIniciada = ruta.estado === "en_curso" || inicioJornadaAt != null;
+
+  if (!rutaIniciada) {
     return NextResponse.json(
       { ok: false, error: "La ruta debe estar iniciada para cargar recolecciones" },
       { status: 400 },
@@ -73,7 +92,8 @@ export async function PATCH(request: Request, { params }: Props) {
   }
 
   const precioRetiro = parsePrecioRetiro(recoleccion.precio);
-  const parsed = parseRecoleccionCampoBody(body, precioRetiro);
+  const precioBolsaExtra = await fetchPrecioBolsaExtraActivo();
+  const parsed = parseRecoleccionCampoBody(body, precioRetiro, precioBolsaExtra);
   if (!parsed.ok) {
     return NextResponse.json({ ok: false, error: parsed.error }, { status: 400 });
   }

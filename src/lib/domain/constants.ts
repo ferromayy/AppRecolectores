@@ -50,6 +50,7 @@ export const RUTA_ESTADOS = [
   "en_curso",
   "completada",
   "cancelada",
+  "suspendida",
 ] as const;
 
 export type RutaEstado = (typeof RUTA_ESTADOS)[number];
@@ -60,6 +61,7 @@ export const RUTA_ESTADO_LABELS: Record<RutaEstado, string> = {
   en_curso: "En curso",
   completada: "Completada",
   cancelada: "Cancelada",
+  suspendida: "Suspendida",
 };
 
 /** Etiquetas para la vista operaria del panel */
@@ -69,6 +71,7 @@ export const RUTA_ESTADO_OPERARIO_LABELS: Record<RutaEstado, string> = {
   en_curso: "En proceso",
   completada: "Realizado",
   cancelada: "Cancelada",
+  suspendida: "Suspendida",
 };
 
 export const RUTA_TURNOS = ["manana", "tarde"] as const;

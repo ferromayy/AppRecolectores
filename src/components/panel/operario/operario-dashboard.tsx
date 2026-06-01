@@ -5,6 +5,7 @@ import { useMemo, useState } from "react";
 
 import { OperarioRecoleccionFormModal } from "@/components/panel/operario/operario-recoleccion-form-modal";
 import { OperarioRecoleccionesTable } from "@/components/panel/operario/operario-recolecciones-table";
+import { OperarioConfirmDialog } from "@/components/panel/operario/operario-confirm-dialog";
 import { OperarioRutaDetalleModal } from "@/components/panel/operario/operario-ruta-detalle-modal";
 import { OperarioRutaFormModal } from "@/components/panel/operario/operario-ruta-form-modal";
 import { OperarioRutaMapModal } from "@/components/panel/operario/operario-ruta-map-modal";
@@ -40,9 +41,13 @@ export function OperarioDashboard({
   const [editRutaId, setEditRutaId] = useState<string | null>(null);
   const [editRecoleccionId, setEditRecoleccionId] = useState<string | null>(null);
   const [creatingRecoleccion, setCreatingRecoleccion] = useState(false);
+  const [suspenderRutaId, setSuspenderRutaId] = useState<string | null>(null);
+  const [suspendiendo, setSuspendiendo] = useState(false);
+  const [suspendError, setSuspendError] = useState<string | null>(null);
 
   const selectedRuta = rutas.find((r) => r.id === selectedRutaId) ?? null;
   const detalleRuta = rutas.find((r) => r.id === detalleRutaId) ?? null;
+  const rutaASuspender = rutas.find((r) => r.id === suspenderRutaId) ?? null;
   const mapaRuta = rutas.find((r) => r.id === mapaRutaId) ?? null;
   const editRuta = rutas.find((r) => r.id === editRutaId) ?? null;
   const editRecoleccion = recolecciones.find((r) => r.id === editRecoleccionId) ?? null;
@@ -61,6 +66,31 @@ export function OperarioDashboard({
     if (mapaRutaId === rutaId) setMapaRutaId(null);
     if (detalleRutaId === rutaId) setDetalleRutaId(null);
     refreshData();
+  }
+
+  async function handleConfirmSuspender() {
+    if (!suspenderRutaId) return;
+
+    setSuspendiendo(true);
+    setSuspendError(null);
+
+    try {
+      const response = await fetch(`/api/panel/rutas/${suspenderRutaId}/suspender`, {
+        method: "POST",
+      });
+      const body = (await response.json()) as { ok?: boolean; error?: string };
+
+      if (!response.ok || !body.ok) {
+        throw new Error(body.error ?? "No se pudo suspender la ruta");
+      }
+
+      setSuspenderRutaId(null);
+      refreshData();
+    } catch (err) {
+      setSuspendError(err instanceof Error ? err.message : "Error al suspender la ruta");
+    } finally {
+      setSuspendiendo(false);
+    }
   }
 
   return (
@@ -86,9 +116,16 @@ export function OperarioDashboard({
             setSelectedRutaId(id);
           }}
           onEditar={setEditRutaId}
+          onSuspender={setSuspenderRutaId}
           mapsDisponible={!!mapsApiKey}
         />
       </section>
+
+      {suspendError && (
+        <p className="rounded-lg border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-800 dark:border-red-900 dark:bg-red-950/40 dark:text-red-300">
+          {suspendError}
+        </p>
+      )}
 
       <section className="space-y-3">
         <div className="flex flex-wrap items-end justify-between gap-3">
@@ -104,7 +141,13 @@ export function OperarioDashboard({
             <button
               type="button"
               onClick={() => setCreatingRecoleccion(true)}
-              className="rounded-lg bg-emerald-700 px-3 py-2 text-sm font-medium text-white hover:bg-emerald-800"
+              disabled={selectedRuta.estado === "completada"}
+              title={
+                selectedRuta.estado === "completada"
+                  ? "No se pueden agregar recolecciones a una ruta finalizada"
+                  : undefined
+              }
+              className="rounded-lg bg-emerald-700 px-3 py-2 text-sm font-medium text-white hover:bg-emerald-800 disabled:cursor-not-allowed disabled:opacity-50"
             >
               + Agregar recolección
             </button>
@@ -122,6 +165,7 @@ export function OperarioDashboard({
         detalle={detalle}
         operarioNombre={operarioNombre}
         onClose={() => setDetalleRutaId(null)}
+        onUpdated={refreshData}
       />
 
       <OperarioRutaMapModal
@@ -164,6 +208,24 @@ export function OperarioDashboard({
         onClose={() => setEditRecoleccionId(null)}
         onSaved={refreshData}
         onDeleted={refreshData}
+      />
+
+      <OperarioConfirmDialog
+        open={suspenderRutaId !== null}
+        title="Suspender ruta"
+        message={
+          rutaASuspender
+            ? `¿Suspender "${rutaASuspender.nombre}"? El recolector no podrá operarla hasta que la reactives.`
+            : "¿Suspender esta ruta?"
+        }
+        confirmLabel="Suspender"
+        destructive
+        loading={suspendiendo}
+        onConfirm={() => void handleConfirmSuspender()}
+        onCancel={() => {
+          setSuspenderRutaId(null);
+          setSuspendError(null);
+        }}
       />
     </div>
   );

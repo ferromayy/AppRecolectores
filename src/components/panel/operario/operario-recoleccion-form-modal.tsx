@@ -43,6 +43,11 @@ export function OperarioRecoleccionFormModal({
   const [nombre, setNombre] = useState("");
   const [direccion, setDireccion] = useState("");
   const [telefono, setTelefono] = useState("");
+  const [tipoServicio, setTipoServicio] = useState("");
+  const [unidad, setUnidad] = useState("");
+  const [frecuencia, setFrecuencia] = useState("");
+  const [precio, setPrecio] = useState("");
+  const [deuda, setDeuda] = useState("");
   const [zona, setZona] = useState("");
   const [barrio, setBarrio] = useState("");
   const [depto, setDepto] = useState("");
@@ -61,6 +66,11 @@ export function OperarioRecoleccionFormModal({
       setNombre("");
       setDireccion("");
       setTelefono("");
+      setTipoServicio("");
+      setUnidad("");
+      setFrecuencia("");
+      setPrecio("");
+      setDeuda("");
       setZona("");
       setBarrio("");
       setDepto("");
@@ -77,6 +87,11 @@ export function OperarioRecoleccionFormModal({
     setNombre(recoleccion.nombre);
     setDireccion(recoleccion.direccion);
     setTelefono(recoleccion.telefono ?? "");
+    setTipoServicio(recoleccion.tipo_servicio ?? "");
+    setUnidad(recoleccion.unidad ?? "");
+    setFrecuencia(recoleccion.frecuencia ?? "");
+    setPrecio(recoleccion.precio_tarifa ?? "");
+    setDeuda(recoleccion.deuda ?? "");
     setZona(recoleccion.zona ?? "");
     setBarrio(recoleccion.barrio ?? "");
     setDepto(recoleccion.depto ?? "");
@@ -106,6 +121,11 @@ export function OperarioRecoleccionFormModal({
     nombre,
     direccion,
     telefono,
+    tipo_servicio: tipoServicio || null,
+    unidad: unidad || null,
+    frecuencia: frecuencia || null,
+    precio: precio || null,
+    deuda: deuda || null,
     zona: zona || null,
     barrio: barrio || null,
     depto: depto || null,
@@ -277,6 +297,27 @@ export function OperarioRecoleccionFormModal({
                   onChange={(e) => setHora(e.target.value)}
                   required
                 />
+              </Field>
+            </div>
+
+            <div className="grid grid-cols-2 gap-3">
+              <Field label="Tipo de servicio">
+                <input className={inputClass} value={tipoServicio} onChange={(e) => setTipoServicio(e.target.value)} />
+              </Field>
+              <Field label="Unidad">
+                <input className={inputClass} value={unidad} onChange={(e) => setUnidad(e.target.value)} />
+              </Field>
+            </div>
+
+            <div className="grid grid-cols-3 gap-3">
+              <Field label="Frecuencia">
+                <input className={inputClass} value={frecuencia} onChange={(e) => setFrecuencia(e.target.value)} />
+              </Field>
+              <Field label="Precio">
+                <input className={inputClass} value={precio} onChange={(e) => setPrecio(e.target.value)} />
+              </Field>
+              <Field label="Deuda">
+                <input className={inputClass} value={deuda} onChange={(e) => setDeuda(e.target.value)} />
               </Field>
             </div>
 

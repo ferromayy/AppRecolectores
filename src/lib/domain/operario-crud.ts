@@ -38,6 +38,11 @@ export type RecoleccionFieldsPayload = {
   direccion: string;
   telefono: string;
   telefono_normalizado: string;
+  unidad: string | null;
+  tipo_servicio: string | null;
+  frecuencia: string | null;
+  precio: string | null;
+  deuda: string | null;
   zona: string | null;
   barrio: string | null;
   depto: string | null;
@@ -117,6 +122,11 @@ export function parseRecoleccionFields(body: Record<string, unknown>):
       direccion,
       telefono,
       telefono_normalizado: phone.value,
+      unidad: optionalStr(body.unidad),
+      tipo_servicio: optionalStr(body.tipo_servicio),
+      frecuencia: optionalStr(body.frecuencia),
+      precio: optionalStr(body.precio),
+      deuda: optionalStr(body.deuda),
       zona: optionalStr(body.zona),
       barrio: optionalStr(body.barrio),
       depto: optionalStr(body.depto),

@@ -4,6 +4,7 @@ import {
   RUTA_TURNO_LABELS,
 } from "@/lib/domain/constants";
 import { formatRutaFecha } from "@/lib/domain/rutas";
+import { evaluarFinalizarRuta } from "@/lib/domain/recolector-finalizar-ruta";
 import type { Database, RutaEstado, RutaTurno } from "@/types/database";
 
 type RutaRow = Database["public"]["Tables"]["rutas"]["Row"];
@@ -16,6 +17,7 @@ export const RECOLECTOR_RUTA_ESTADO_LABELS: Record<RutaEstado, string> = {
   en_curso: "En proceso",
   completada: "Finalizada",
   cancelada: "Cancelada",
+  suspendida: "Suspendida",
 };
 
 export type RecolectorRutaDetalle = {
@@ -36,6 +38,11 @@ export type RecolectorRutaDetalle = {
   recoleccionesCount: number;
   puedeIniciar: boolean;
   rutaIniciada: boolean;
+  rutaFinalizada: boolean;
+  rutaSuspendida: boolean;
+  puedeFinalizar: boolean;
+  recoleccionesPendientes: number;
+  mensajeFinalizar: string | null;
 };
 
 export type RecolectorRecoleccionPreview = {
@@ -99,7 +106,7 @@ export function formatRecolectorMoney(value: number | null | undefined): string 
   }).format(value);
 }
 
-function getInicioJornadaAt(ruta: RutaRow): string | null {
+export function getInicioJornadaAt(ruta: Pick<RutaRow, "inicio_jornada_at" | "metadata">): string | null {
   if (ruta.inicio_jornada_at) return ruta.inicio_jornada_at;
   const meta = ruta.metadata;
   if (meta && typeof meta === "object" && !Array.isArray(meta)) {
@@ -123,10 +130,16 @@ export function buildRecolectorRutaDetalle(
 
   const inicioJornadaAt = getInicioJornadaAt(ruta);
   const rutaIniciada = inicioJornadaAt != null || ruta.estado === "en_curso";
+  const rutaSuspendida = ruta.estado === "suspendida";
   const puedeIniciar =
-    !rutaIniciada && ruta.estado !== "completada" && ruta.estado !== "cancelada";
+    !rutaIniciada &&
+    !rutaSuspendida &&
+    ruta.estado !== "completada" &&
+    ruta.estado !== "cancelada";
 
   const insumosInicio = parseInsumosInicio(ruta.insumos_inicio);
+  const rutaFinalizada = ruta.estado === "completada";
+  const finalizar = evaluarFinalizarRuta(recolecciones, ruta.estado, rutaIniciada);
 
   return {
     id: ruta.id,
@@ -146,6 +159,11 @@ export function buildRecolectorRutaDetalle(
     recoleccionesCount: recolecciones.length,
     puedeIniciar,
     rutaIniciada,
+    rutaFinalizada,
+    rutaSuspendida,
+    puedeFinalizar: finalizar.puedeFinalizar,
+    recoleccionesPendientes: finalizar.recoleccionesPendientes,
+    mensajeFinalizar: finalizar.mensajeBloqueo,
   };
 }
 
@@ -209,10 +227,13 @@ export function formatInicioJornada(value: string | null): string {
   if (!value) return "—";
   const d = new Date(value);
   if (Number.isNaN(d.getTime())) return "—";
+  // Importante: fijar timezone para evitar hydration mismatch (Node vs navegador).
   return d.toLocaleString("es-AR", {
+    timeZone: "America/Argentina/Buenos_Aires",
     day: "2-digit",
     month: "2-digit",
     hour: "2-digit",
     minute: "2-digit",
+    hour12: true,
   });
 }

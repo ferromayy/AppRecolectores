@@ -3,7 +3,9 @@ import { notFound, redirect } from "next/navigation";
 
 import { RecolectorRecoleccionCampoForm } from "@/components/panel/recolector/recolector-recoleccion-campo-form";
 import { requireAuth } from "@/lib/auth/session";
+import { fetchPrecioBolsaExtraActivo } from "@/lib/data/sistema-parametros";
 import { buildRecoleccionCampoFormData } from "@/lib/domain/recolector-recoleccion-form";
+import { getInicioJornadaAt } from "@/lib/domain/recolector-ruta";
 import { createClient } from "@/lib/supabase/server";
 
 type Props = { params: Promise<{ id: string; recoleccionId: string }> };
@@ -23,14 +25,33 @@ export default async function RecolectorRecoleccionCampoPage({ params }: Props) 
 
   const { data: ruta } = await supabase
     .from("rutas")
-    .select("id, nombre, asignado_a, estado")
+    .select("id, nombre, asignado_a, estado, inicio_jornada_at, metadata")
     .eq("id", rutaId)
     .eq("asignado_a", auth.user.id)
     .maybeSingle();
 
   if (!ruta) notFound();
 
-  if (ruta.estado !== "en_curso") {
+  if (ruta.estado === "suspendida") {
+    return (
+      <div className="space-y-4">
+        <p className="rounded-2xl border border-orange-200 bg-orange-50 p-4 text-sm text-orange-900 dark:border-orange-900 dark:bg-orange-950/40 dark:text-orange-200">
+          Esta ruta está suspendida. Contactá al operario.
+        </p>
+        <Link
+          href={`/panel/mis-rutas/${rutaId}`}
+          className="inline-flex min-h-[3rem] items-center text-sm font-medium text-emerald-700 dark:text-emerald-400"
+        >
+          ← Volver a la ruta
+        </Link>
+      </div>
+    );
+  }
+
+  const inicioJornadaAt = getInicioJornadaAt(ruta);
+  const rutaIniciada = ruta.estado === "en_curso" || inicioJornadaAt != null;
+
+  if (!rutaIniciada) {
     return (
       <div className="space-y-4">
         <p className="rounded-2xl border border-amber-200 bg-amber-50 p-4 text-sm text-amber-900 dark:border-amber-900 dark:bg-amber-950/40 dark:text-amber-200">
@@ -55,7 +76,8 @@ export default async function RecolectorRecoleccionCampoPage({ params }: Props) 
 
   if (!recoleccion) notFound();
 
-  const formData = buildRecoleccionCampoFormData(rutaId, recoleccion);
+  const precioBolsaExtra = await fetchPrecioBolsaExtraActivo();
+  const formData = buildRecoleccionCampoFormData(rutaId, recoleccion, precioBolsaExtra);
 
   return <RecolectorRecoleccionCampoForm data={formData} rutaNombre={ruta.nombre} />;
 }

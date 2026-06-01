@@ -78,7 +78,9 @@ export function OperarioRecoleccionesTable({
               <td className="whitespace-nowrap px-3 py-2.5">{item.hora_programada}</td>
               <td className="px-3 py-2.5 font-medium">{item.nombre}</td>
               <td className="whitespace-nowrap px-3 py-2.5">
-                {formatHoraReal(item.hora_real)}
+                <span suppressHydrationWarning>
+                  {formatHoraReal(item.hora_real)}
+                </span>
               </td>
               <td className="whitespace-nowrap px-3 py-2.5 text-right">
                 {formatMoney(item.precio_total ?? (item.precio_tarifa ? Number(item.precio_tarifa) || null : null))}

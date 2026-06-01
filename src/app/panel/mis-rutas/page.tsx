@@ -29,7 +29,7 @@ export default async function MisRutasPage() {
           Mis rutas
         </h1>
         <p className="mt-1 text-sm text-zinc-500">
-          Organizadas por turno: mañana y tarde.
+          Activas, completadas y suspendidas.
         </p>
       </div>
 
@@ -39,7 +39,7 @@ export default async function MisRutasPage() {
         </p>
       )}
 
-      <MisRutasCards rutas={rutas ?? []} groupByTurno />
+      <MisRutasCards rutas={rutas ?? []} groupByCategoria />
     </div>
   );
 }

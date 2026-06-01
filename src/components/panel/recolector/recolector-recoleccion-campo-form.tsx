@@ -8,6 +8,7 @@ import {
   type RecoleccionCampoFormData,
 } from "@/lib/domain/recolector-recoleccion-form";
 import { formatPrecioDisplay } from "@/lib/domain/recolector-recoleccion-campo";
+import { buildPrecioCobroDetalle } from "@/lib/domain/sistema-parametros";
 
 type Props = {
   data: RecoleccionCampoFormData;
@@ -33,7 +34,14 @@ export function RecolectorRecoleccionCampoForm({ data, rutaNombre }: Props) {
   const [saving, setSaving] = useState(false);
 
   const esCancelacion = motivoCancelacion.trim().length > 0;
-  const precioTotalLabel = useMemo(
+  const bolsasLlenasNum =
+    bolsasLlenas.trim() === "" ? 0 : Number.parseInt(bolsasLlenas, 10) || 0;
+  const cobroDetalle = useMemo(
+    () =>
+      buildPrecioCobroDetalle(data.precioRetiro, data.precioBolsaExtra, bolsasLlenasNum),
+    [data.precioRetiro, data.precioBolsaExtra, bolsasLlenasNum],
+  );
+  const precioRetiroLabel = useMemo(
     () => formatPrecioDisplay(data.precioRetiro),
     [data.precioRetiro],
   );
@@ -42,6 +50,20 @@ export function RecolectorRecoleccionCampoForm({ data, rutaNombre }: Props) {
     e.preventDefault();
     setSaving(true);
     setError(null);
+
+    const montoEfectivoVal = parsePaymentValue(montoEfectivo);
+    const montoTransferenciaVal = parsePaymentValue(montoTransferencia);
+    const montoQrVal = parsePaymentValue(montoQr);
+
+    if (
+      montoEfectivoVal === null ||
+      montoTransferenciaVal === null ||
+      montoQrVal === null
+    ) {
+      setError("Efectivo, transferencia y QR deben ser números ≥ 0");
+      setSaving(false);
+      return;
+    }
 
     try {
       const response = await fetch(
@@ -57,10 +79,9 @@ export function RecolectorRecoleccionCampoForm({ data, rutaNombre }: Props) {
             bolsas_nuevas: bolsasNuevas === "" ? null : Number.parseInt(bolsasNuevas, 10),
             biotachos_nuevos:
               biotachosNuevos === "" ? null : Number.parseInt(biotachosNuevos, 10),
-            monto_efectivo: montoEfectivo.trim() === "" ? null : Number(montoEfectivo),
-            monto_transferencia:
-              montoTransferencia.trim() === "" ? null : Number(montoTransferencia),
-            monto_qr: montoQr.trim() === "" ? null : Number(montoQr),
+            monto_efectivo: montoEfectivoVal,
+            monto_transferencia: montoTransferenciaVal,
+            monto_qr: montoQrVal,
             nombre_firmante: nombreFirmante.trim(),
             firma_confirmada: firmaConfirmada,
           }),
@@ -164,24 +185,42 @@ export function RecolectorRecoleccionCampoForm({ data, rutaNombre }: Props) {
                 Cobro
               </h2>
               <dl className="mb-4 space-y-2 text-sm">
-                <ReadOnlyRow label="Precio de retiro" value={precioTotalLabel} />
-                <ReadOnlyRow label="Precio total a cobrar" value={precioTotalLabel} />
+                <ReadOnlyRow label="Precio de retiro" value={precioRetiroLabel} />
+                {cobroDetalle.bolsasExtra > 0 && (
+                  <>
+                    <ReadOnlyRow
+                      label="Bolsa extra"
+                      value={data.precioBolsaExtraLabel}
+                    />
+                    <ReadOnlyRow
+                      label="Cargo bolsa extra"
+                      value={`${cobroDetalle.bolsaExtraDetalleLabel} = ${cobroDetalle.montoBolsaExtraLabel}`}
+                    />
+                  </>
+                )}
+                <ReadOnlyRow
+                  label="Precio total a cobrar"
+                  value={cobroDetalle.precioTotalLabel}
+                />
               </dl>
               <p className="mb-3 text-xs text-zinc-500">
-                Completá uno o más montos. La suma debe ser igual al total a cobrar.
+                Desde la 3.ª bolsa llena se suma el precio de bolsa extra por cada bolsa
+                adicional. Los tres montos son obligatorios (podés poner{" "}
+                <strong>0</strong>). La suma no puede ser menor al total a cobrar (puede ser
+                mayor).
               </p>
               <div className="space-y-3">
                 <MoneyField
-                  label="Monto efectivo"
+                  label="Monto efectivo *"
                   value={montoEfectivo}
                   onChange={setMontoEfectivo}
                 />
                 <MoneyField
-                  label="Monto transferencia"
+                  label="Monto transferencia *"
                   value={montoTransferencia}
                   onChange={setMontoTransferencia}
                 />
-                <MoneyField label="Monto QR" value={montoQr} onChange={setMontoQr} />
+                <MoneyField label="Monto QR *" value={montoQr} onChange={setMontoQr} />
               </div>
             </section>
           </>
@@ -260,6 +299,14 @@ function Field({
   );
 }
 
+function parsePaymentValue(value: string): number | null {
+  const trimmed = value.trim();
+  if (trimmed === "") return null;
+  const n = Number(trimmed.replace(",", "."));
+  if (!Number.isFinite(n) || n < 0) return null;
+  return n;
+}
+
 function MoneyField({
   label,
   value,
@@ -275,11 +322,14 @@ function MoneyField({
       <input
         type="number"
         inputMode="decimal"
-        min="1"
+        min="0"
         step="1"
+        required
         value={value}
         onChange={(e) => onChange(e.target.value)}
-        placeholder="Opcional"
+        onBlur={() => {
+          if (value.trim() === "") onChange("0");
+        }}
         className={inputClass}
       />
     </label>

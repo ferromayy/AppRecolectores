@@ -19,6 +19,10 @@ export function PanelShell({ children, role, userName }: Props) {
 
   const links = [{ href: "/panel", label: isStaffRole(role) ? "Operativo" : "Inicio" }];
 
+  if (isStaffRole(role)) {
+    links.push({ href: "/panel/parametros", label: "Parámetros" });
+  }
+
   if (canManageUsers({ role })) {
     links.push({ href: "/panel/usuarios", label: "Usuarios" });
   }

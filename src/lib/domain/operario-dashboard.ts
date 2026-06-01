@@ -45,12 +45,16 @@ export type RecoleccionOperarioRow = {
   direccion: string;
   barrio: string | null;
   depto: string | null;
+  unidad: string | null;
+  tipo_servicio: string | null;
+  frecuencia: string | null;
   telefono: string | null;
   hora_programada: string;
   nombre: string;
   hora_real: string | null;
   precio_total: number | null;
   precio_tarifa: string | null;
+  deuda: string | null;
   monto_efectivo: number | null;
   monto_transferencia: number | null;
   observaciones: string | null;
@@ -163,6 +167,9 @@ export function buildRecoleccionOperarioRows(
       direccion: item.direccion,
       barrio: item.barrio,
       depto: item.depto,
+      unidad: item.unidad,
+      tipo_servicio: item.tipo_servicio,
+      frecuencia: item.frecuencia,
       telefono: item.telefono,
       hora_programada: String(item.hora).slice(0, 5),
       nombre: item.nombre,
@@ -174,6 +181,7 @@ export function buildRecoleccionOperarioRows(
             ? num(item.monto_efectivo) + num(item.monto_transferencia)
             : null,
       precio_tarifa: item.precio,
+      deuda: item.deuda,
       monto_efectivo: item.monto_efectivo != null ? num(item.monto_efectivo) : null,
       monto_transferencia:
         item.monto_transferencia != null ? num(item.monto_transferencia) : null,
@@ -244,11 +252,13 @@ export function formatDateTime(value: string | null | undefined): string {
   const d = new Date(value);
   if (Number.isNaN(d.getTime())) return "—";
   return d.toLocaleString("es-AR", {
+    timeZone: "America/Argentina/Buenos_Aires",
     day: "2-digit",
     month: "2-digit",
     year: "numeric",
     hour: "2-digit",
     minute: "2-digit",
+    hour12: true,
   });
 }
 
@@ -256,7 +266,12 @@ export function formatHoraReal(value: string | null | undefined): string {
   if (!value) return "—";
   const d = new Date(value);
   if (Number.isNaN(d.getTime())) return "—";
-  return d.toLocaleTimeString("es-AR", { hour: "2-digit", minute: "2-digit" });
+  return d.toLocaleTimeString("es-AR", {
+    timeZone: "America/Argentina/Buenos_Aires",
+    hour: "2-digit",
+    minute: "2-digit",
+    hour12: true,
+  });
 }
 
 export { formatRutaFecha, formatRutaEstado } from "@/lib/domain/rutas";

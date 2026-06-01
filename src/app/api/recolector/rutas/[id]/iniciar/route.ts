@@ -69,6 +69,13 @@ export async function POST(request: Request, { params }: Props) {
     );
   }
 
+  if (ruta.estado === "suspendida") {
+    return NextResponse.json(
+      { ok: false, error: "Esta ruta está suspendida. Contactá al operario." },
+      { status: 403 },
+    );
+  }
+
   const now = new Date().toISOString();
   const existingMetadata =
     ruta.metadata && typeof ruta.metadata === "object" && !Array.isArray(ruta.metadata)

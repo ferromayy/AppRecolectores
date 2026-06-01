@@ -86,6 +86,7 @@ Guías detalladas:
 rutas
   └── ruta_recolecciones (paradas / clientes)
 profiles (usuarios con rol)
+sistema_precio_historial (parámetros de precio con vigencia)
 ```
 
 Una **ruta** se agrupa por `(fecha, turno, recolector)`. Cada fila de la planilla es una **recolección**, única por teléfono normalizado dentro de la ruta.
@@ -126,6 +127,8 @@ node scripts/apply-pending-migrations.mjs
 | `20260524120000_rutas_inicio_insumos.sql` | Km inicial + insumos al iniciar ruta |
 | `20260524130000_recoleccion_campo_campos.sql` | Bolsas, biotachos, QR, cancelación |
 | `20260524140000_fix_missing_operativo_columns.sql` | Reparación idempotente + reload schema PostgREST |
+| `20260525120000_sistema_parametros_precio.sql` | Tabla `sistema_precio_historial` (precio bolsa extra vigente) |
+| `20260526120000_ruta_estado_suspendida.sql` | Estado `suspendida` en enum `ruta_estado` |
 
 > **Importante:** si aparece `Could not find the '...' column in the schema cache`, ejecutá la migración faltante y/o el `NOTIFY pgrst, 'reload schema'` del archivo `20260524140000`.
 
@@ -149,6 +152,7 @@ src/
     login/
     panel/                  # UI autenticada
       mis-rutas/            # Recolector
+      parametros/           # Parámetros de sistema (staff)
       usuarios/             # Gestión de usuarios
   components/
     admin/                  # Panel de usuarios
@@ -206,10 +210,11 @@ Matriz resumida (`src/lib/auth/permissions.ts`):
 | Ruta | Rol | Descripción |
 |------|-----|-------------|
 | `/login` | Público | Inicio de sesión |
-| `/panel` | Todos | Staff → dashboard operario. Recolector → home del día |
+| `/panel` | Todos | Staff → dashboard operario. Recolector → home del día (solo rutas activas de hoy) |
+| `/panel/parametros` | superadmin, admin | Precio de bolsa extra (historial con vigencia) |
 | `/panel/usuarios` | superadmin, admin | Alta y gestión de usuarios |
-| `/panel/mis-rutas` | recolector | Rutas asignadas (Mañana / Tarde) |
-| `/panel/mis-rutas/[id]` | recolector | Detalle de ruta + lista de paradas |
+| `/panel/mis-rutas` | recolector | Rutas asignadas (Activas / Completadas / Suspendidas) |
+| `/panel/mis-rutas/[id]` | recolector | Detalle de ruta + lista de paradas + finalizar ruta |
 | `/panel/mis-rutas/[id]/iniciar` | recolector | Formulario km + insumos |
 | `/panel/mis-rutas/[id]/recolecciones/[recoleccionId]` | recolector | Carga en campo por parada |
 
@@ -240,21 +245,27 @@ Aliases que redirigen: `/panel/rutas`, `/panel/recolecciones`, `/admin/usuarios`
 |--------|----------|-------------|
 | PATCH | `/api/panel/rutas/[id]` | Editar ruta |
 | DELETE | `/api/panel/rutas/[id]` | Eliminar ruta |
+| POST | `/api/panel/rutas/[id]/suspender` | Suspender ruta (`activa` / `en_curso` → `suspendida`) |
+| DELETE | `/api/panel/rutas/[id]/suspender` | Reactivar ruta suspendida (vuelve a `activa` o `en_curso`) |
 | POST | `/api/panel/rutas/[id]/recolecciones` | Agregar parada |
 | PATCH | `/api/panel/rutas/[id]/recolecciones/[recoleccionId]` | Editar parada |
 | DELETE | `/api/panel/rutas/[id]/recolecciones/[recoleccionId]` | Eliminar parada |
 | PATCH | `/api/panel/rutas/[id]/recolecciones/reorden` | Reordenar (`{ orden: string[] }`) |
 | GET | `/api/panel/rutas/[id]/mapa` | Puntos geocodificados para mapa |
+| GET/POST | `/api/panel/parametros/bolsa-extra` | Consultar historial / agregar nuevo precio vigente |
 
 ### Recolector
 
 | Método | Endpoint | Body | Descripción |
 |--------|----------|------|-------------|
 | POST | `/api/recolector/rutas/[id]/iniciar` | `{ km_inicial, insumos[] }` | Pasa ruta a `en_curso` |
+| POST | `/api/recolector/rutas/[id]/finalizar` | — | Cierra ruta (`completada`) si todas las paradas están visitadas o canceladas |
 | PATCH | `/api/recolector/rutas/[id]/recolecciones/[recoleccionId]/campo` | ver dominio | Carga retiro/cobro/firma |
 
 Validación de carga en campo: `src/lib/domain/recolector-recoleccion-campo.ts`  
-Validación inicio de ruta: `src/lib/domain/ruta-insumos.ts`
+Validación inicio de ruta: `src/lib/domain/ruta-insumos.ts`  
+Validación finalizar ruta: `src/lib/domain/recolector-finalizar-ruta.ts`  
+Precio total a cobrar (bolsa extra): `src/lib/domain/sistema-parametros.ts`
 
 ### Integración Sheets
 
@@ -285,9 +296,28 @@ Componentes en `src/components/panel/operario/`:
 - `operario-rutas-table.tsx` — tabla de rutas
 - `operario-recolecciones-table.tsx` — paradas de la ruta seleccionada
 - `operario-ruta-map-modal.tsx` — mapa + drag-and-drop reorder
+- `operario-ruta-detalle-modal.tsx` — detalle + suspender/reactivar ruta
 - Modales de edición de ruta y recolección
+- `operario-parametros-sistema.tsx` — precio de bolsa extra
 
 Datos: `src/lib/data/operario-dashboard.ts` (admin client, hasta ~200 rutas).
+
+### Parámetros de sistema
+
+Ruta `/panel/parametros` (staff). Tabla `sistema_precio_historial`:
+
+- Clave `bolsa_extra`: precio unitario de cada bolsa llena **por encima de las 2 incluidas**
+- Solo se puede **agregar** un nuevo precio (no editar el historial); el anterior queda con `vigente_hasta`
+- El precio activo se usa en el formulario de campo del recolector y en la API PATCH de carga
+
+Fórmula del total a cobrar:
+
+```
+Total = Precio retiro + (Precio bolsa extra × max(0, bolsas_llenas − 2))
+```
+
+Dominio: `src/lib/domain/sistema-parametros.ts`  
+Datos: `src/lib/data/sistema-parametros.ts`
 
 ### Panel recolector
 
@@ -296,16 +326,39 @@ Componentes en `src/components/panel/recolector/`:
 | Componente | Función |
 |------------|---------|
 | `recolector-shell.tsx` | Layout mobile + header + bottom nav |
-| `mis-rutas-cards.tsx` | Listado agrupado por turno |
-| `recolector-ruta-detalle.tsx` | Detalle, Maps, lista de paradas |
+| `mis-rutas-cards.tsx` | Listado agrupado por categoría (Activas / Completadas / Suspendidas) |
+| `recolector-ruta-detalle.tsx` | Detalle, Maps, lista de paradas, botón **Finalizar ruta** |
 | `recolector-inicio-ruta-form.tsx` | Km + insumos |
-| `recolector-recoleccion-campo-form.tsx` | Carga por parada |
+| `recolector-recoleccion-campo-form.tsx` | Carga por parada (con desglose de bolsa extra) |
 | `recolector-recoleccion-sheet.tsx` | Preview read-only (ruta no iniciada) |
 
-Dominio: `src/lib/domain/recolector-ruta.ts`, `recolector-recoleccion-form.ts`
+Dominio: `src/lib/domain/recolector-ruta.ts`, `recolector-recoleccion-form.ts`, `recolector-rutas-list.ts`, `ruta-estado-transiciones.ts`
 
-**Estados de ruta:** `borrador`, `activa`, `en_curso`, `completada`, `cancelada`  
+**Estados de ruta:** `borrador`, `activa`, `en_curso`, `completada`, `cancelada`, `suspendida`  
 **Estados de parada:** `pendiente`, `en_camino`, `visitada`, `omitida`, `cancelada`
+
+#### Finalizar ruta (recolector)
+
+Condiciones (cliente y servidor en `recolector-finalizar-ruta.ts`):
+
+1. Ruta en estado `en_curso`
+2. Todas las paradas en `visitada` o `cancelada` (pendientes u omitidas bloquean)
+
+Al confirmar: `POST /api/recolector/rutas/[id]/finalizar` → estado `completada`, `cierre_recolector_at`, suma de efectivo. La UI redirige a `/panel`.
+
+#### Suspender ruta (staff)
+
+- Staff suspende desde tabla operario (**Suspender**) o modal **Ver detalle**
+- `POST /api/panel/rutas/[id]/suspender` — solo desde `activa`, `en_curso` o `borrador`
+- Recolector no puede iniciar, cargar paradas ni finalizar mientras esté suspendida
+- `DELETE /api/panel/rutas/[id]/suspender` reactiva: vuelve a `en_curso` si ya tenía inicio de jornada, si no a `activa`
+
+#### Validación de pagos en campo
+
+En `recolector-recoleccion-campo.ts`:
+
+- Efectivo, transferencia y QR: obligatorios, mínimo 0 (default `"0"` en el form)
+- Suma de los tres montos **≥ total a cobrar** (puede ser mayor, no menor)
 
 ---
 
@@ -371,6 +424,10 @@ npm run start    # Servidor de producción local
 | Manual de usuarios | [MANUAL_USUARIO.md](./MANUAL_USUARIO.md) |
 | Tipos de DB | `src/types/database.ts` |
 | Constantes de dominio | `src/lib/domain/constants.ts` |
+| Finalizar ruta (dominio) | `src/lib/domain/recolector-finalizar-ruta.ts` |
+| Suspensión de rutas | `src/lib/domain/ruta-estado-transiciones.ts` |
+| Listado recolector por categoría | `src/lib/domain/recolector-rutas-list.ts` |
+| Precio bolsa extra | `src/lib/domain/sistema-parametros.ts` |
 | Permisos | `src/lib/auth/permissions.ts` |
 
 Si algo no está documentado aquí, buscá en `docs/` o en el código bajo `src/lib/domain/` — ahí vive la lógica de negocio explícita.

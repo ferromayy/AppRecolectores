@@ -4,6 +4,7 @@ import { OperarioDashboard } from "@/components/panel/operario/operario-dashboar
 import { MisRutasCards } from "@/components/panel/recolector/mis-rutas-cards";
 import { canManageUsers } from "@/lib/auth/permissions";
 import { getSessionUser } from "@/lib/auth/session";
+import { categoriaRutaRecolector } from "@/lib/domain/recolector-rutas-list";
 import { fetchOperarioDashboardData } from "@/lib/data/operario-dashboard";
 import { formatRutaFecha } from "@/lib/domain/rutas";
 import { isStaffRole } from "@/lib/domain/constants";
@@ -23,7 +24,12 @@ export default async function PanelHomePage() {
     rutasRecolector = await fetchRutasRecolector(user.id);
   }
 
-  const rutasHoy = rutasRecolector.filter((r) => r.fecha === todayIso());
+  const hoyIso = todayIsoAr();
+  const rutasHoy = rutasRecolector.filter((r) => r.fecha === hoyIso);
+  const rutasHoyActivas = rutasHoy.filter((r) => categoriaRutaRecolector(r.estado) === "activas");
+  const ultimaFecha = rutasRecolector[0]?.fecha ?? null;
+  const rutasUltimaJornada =
+    !rutasHoy.length && ultimaFecha ? rutasRecolector.filter((r) => r.fecha === ultimaFecha) : [];
 
   if (isRecolector) {
     return (
@@ -33,8 +39,8 @@ export default async function PanelHomePage() {
             Hola, {profile?.full_name?.split(" ")[0] ?? "recolector"}
           </h1>
           <p className="mt-1 text-sm text-zinc-500">
-            {rutasHoy.length > 0
-              ? `Tenés ${rutasHoy.length} ruta(s) para hoy.`
+            {rutasHoyActivas.length > 0
+              ? `Tenés ${rutasHoyActivas.length} ruta(s) activa(s) para hoy.`
               : "Revisá tus rutas asignadas."}
           </p>
         </div>
@@ -42,9 +48,18 @@ export default async function PanelHomePage() {
         {rutasHoy.length > 0 && (
           <section className="space-y-3">
             <h2 className="text-sm font-semibold uppercase tracking-wide text-zinc-500">
-              Hoy · {formatRutaFecha(todayIso())}
+              Hoy · {formatRutaFecha(hoyIso)}
             </h2>
-            <MisRutasCards rutas={rutasHoy} compact groupByTurno />
+            <MisRutasCards rutas={rutasHoy} compact groupByCategoria />
+          </section>
+        )}
+
+        {rutasHoy.length === 0 && rutasUltimaJornada.length > 0 && ultimaFecha && (
+          <section className="space-y-3">
+            <h2 className="text-sm font-semibold uppercase tracking-wide text-zinc-500">
+              Última jornada · {formatRutaFecha(ultimaFecha)}
+            </h2>
+            <MisRutasCards rutas={rutasUltimaJornada} compact groupByCategoria />
           </section>
         )}
 
@@ -61,7 +76,7 @@ export default async function PanelHomePage() {
               Próximas / anteriores
             </h2>
             <MisRutasCards
-              rutas={rutasRecolector.filter((r) => r.fecha !== todayIso()).slice(0, 3)}
+              rutas={rutasRecolector.filter((r) => r.fecha !== hoyIso).slice(0, 3)}
               compact
             />
           </section>
@@ -134,4 +149,20 @@ async function fetchRutasRecolector(userId: string) {
 
 function todayIso() {
   return new Date().toISOString().slice(0, 10);
+}
+
+function todayIsoAr() {
+  const parts = new Intl.DateTimeFormat("en-CA", {
+    timeZone: "America/Argentina/Buenos_Aires",
+    year: "numeric",
+    month: "2-digit",
+    day: "2-digit",
+  })
+    .formatToParts(new Date())
+    .reduce<Record<string, string>>((acc, part) => {
+      if (part.type !== "literal") acc[part.type] = part.value;
+      return acc;
+    }, {});
+
+  return `${parts.year}-${parts.month}-${parts.day}`;
 }
