@@ -5,6 +5,8 @@ Documentación de onboarding técnico para quien se sume al proyecto. Cubre stac
 **Producción:** https://app-recolectores.vercel.app  
 **Manual de uso (no técnico):** [MANUAL_USUARIO.md](./MANUAL_USUARIO.md)
 
+**Cambios recientes (jun 2026):** vistas `/panel/historial` y `/panel/kpis`, estado `cerrada`, API cierre operario, reactivar desde `completada`, export CSV, tablas historial ampliadas.
+
 ---
 
 ## 1. Qué es esta app
@@ -130,6 +132,10 @@ node scripts/apply-pending-migrations.mjs
 | `20260525120000_sistema_parametros_precio.sql` | Tabla `sistema_precio_historial` (precio bolsa extra vigente) |
 | `20260526120000_ruta_estado_suspendida.sql` | Estado `suspendida` en enum `ruta_estado` |
 | `20260531120000_ruta_cierre_recolector_campos.sql` | Campos de cierre: km final, descarga, gastos, total efectivo, observaciones recolector |
+| `20260601120000_ruta_estado_terminada.sql` | Estado `cerrada` en enum `ruta_estado` (cierre operario → Historial) |
+| `20260602120000_ruta_estado_terminada_a_cerrada.sql` | Renombra `terminada` → `cerrada` si existía; idempotente |
+
+Columnas de **cierre operario** en `rutas` (desde `20260523120000` / `20260524140000`): `cierre_operario_at`, `cierre_operario_por`.
 
 > **Importante:** si aparece `Could not find the '...' column in the schema cache`, ejecutá la migración faltante y/o el `NOTIFY pgrst, 'reload schema'` del archivo `20260524140000`.
 
@@ -152,6 +158,8 @@ src/
     auth/                   # Callback, confirmar invitación, cambiar contraseña
     login/
     panel/                  # UI autenticada
+      historial/            # Rutas cerradas / canceladas (staff)
+      kpis/                 # Indicadores agregados (staff)
       mis-rutas/            # Recolector
       parametros/           # Parámetros de sistema (staff)
       usuarios/             # Gestión de usuarios
@@ -195,7 +203,7 @@ Matriz resumida (`src/lib/auth/permissions.ts`):
 
 | Acción | superadmin | admin | recolector |
 |--------|:----------:|:-----:|:----------:|
-| Panel operario | ✅ | ✅ | ❌ |
+| Panel operario (Operativo, Historial, KPIs) | ✅ | ✅ | ❌ |
 | Crear admin | ✅ | ❌ | ❌ |
 | Crear recolector | ✅ | ✅ | ❌ |
 | Reset password admin | ✅ | ❌ | ❌ |
@@ -212,8 +220,9 @@ Matriz resumida (`src/lib/auth/permissions.ts`):
 |------|-----|-------------|
 | `/login` | Público | Inicio de sesión |
 | `/panel` | Todos | Staff → dashboard operario. Recolector → home (Hoy / Última jornada) |
-| `/panel` | superadmin, admin | Rutas en operación (activas / en curso) |
-| `/panel/historial` | superadmin, admin | Rutas cerradas (cierre operario) o canceladas (solo consulta) |
+| `/panel` | superadmin, admin | **Operativo:** rutas no historial (activas, en curso, realizadas, suspendidas) |
+| `/panel/historial` | superadmin, admin | Rutas `cerrada` o `cancelada`; tablas ampliadas + export CSV |
+| `/panel/kpis` | superadmin, admin | KPIs por período (presets o `?desde=&hasta=`) + export CSV |
 | `/panel/parametros` | superadmin, admin | Precio de bolsa extra (historial con vigencia) |
 | `/panel/usuarios` | superadmin, admin | Alta y gestión de usuarios |
 | `/panel/mis-rutas` | recolector | Rutas asignadas (Activas / Completadas / Suspendidas) |
@@ -249,9 +258,10 @@ Aliases que redirigen: `/panel/rutas`, `/panel/recolecciones`, `/admin/usuarios`
 |--------|----------|-------------|
 | PATCH | `/api/panel/rutas/[id]` | Editar ruta |
 | DELETE | `/api/panel/rutas/[id]` | Eliminar ruta |
-| POST | `/api/panel/rutas/[id]/suspender` | Suspender ruta (`activa` / `en_curso` → `suspendida`) |
-| DELETE | `/api/panel/rutas/[id]/suspender` | Reactivar ruta (desde Operativo; suspendida → `en_curso`) |
-| POST | `/api/panel/rutas/[id]/recolecciones` | Agregar parada (bloqueado si ruta `completada`) |
+| POST | `/api/panel/rutas/[id]/suspender` | Suspender ruta (`activa` / `en_curso` / `borrador` → `suspendida`) |
+| DELETE | `/api/panel/rutas/[id]/suspender` | Reactivar (`completada` \| `suspendida` → `en_curso`; limpia cierre operario y, si aplica, cierre recolector) |
+| POST | `/api/panel/rutas/[id]/cierre-operario` | Cierre operario (`completada` → `cerrada`; setea `cierre_operario_at` / `cierre_operario_por`) |
+| POST | `/api/panel/rutas/[id]/recolecciones` | Agregar parada (bloqueado si ruta `completada` o `cerrada`) |
 | PATCH | `/api/panel/rutas/[id]/recolecciones/[recoleccionId]` | Editar parada |
 | DELETE | `/api/panel/rutas/[id]/recolecciones/[recoleccionId]` | Eliminar parada |
 | PATCH | `/api/panel/rutas/[id]/recolecciones/reorden` | Reordenar (`{ orden: string[] }`) |
@@ -295,17 +305,44 @@ Doc: [SHEETS_INTEGRATION.md](./SHEETS_INTEGRATION.md)
 
 ### Panel operario
 
+**Operativo** (`/panel`) y **Historial** (`/panel/historial`) comparten `operario-dashboard.tsx` con distinto conjunto de rutas:
+
+- Operativo: `esRutaOperativa(estado)` — incluye `completada` (Realizado) y `suspendida`
+- Historial: `RUTA_ESTADOS_HISTORIAL` = `cerrada`, `cancelada` (`ruta-estado-transiciones.ts`)
+
 Componentes en `src/components/panel/operario/`:
 
-- `operario-dashboard.tsx` — orquestador
-- `operario-rutas-table.tsx` — tabla de rutas
-- `operario-recolecciones-table.tsx` — paradas de la ruta seleccionada
-- `operario-ruta-map-modal.tsx` — mapa + drag-and-drop reorder
-- `operario-ruta-detalle-modal.tsx` — detalle + suspender/reactivar ruta
-- Modales de edición de ruta y recolección
-- `operario-parametros-sistema.tsx` — precio de bolsa extra
+| Componente | Función |
+|------------|---------|
+| `operario-dashboard.tsx` | Orquestador Operativo / Historial; cierre operario, export historial |
+| `operario-rutas-table.tsx` | Tabla Operativo (Suspender, Reactivar, Cierre operario) |
+| `operario-historial-rutas-table.tsx` | Tabla Historial (columnas ampliadas, insumos) |
+| `operario-recolecciones-table.tsx` | Paradas en Operativo (editable) |
+| `operario-historial-recolecciones-table.tsx` | Paradas en Historial (orden de columnas fijo) |
+| `operario-cliente-detalle-modal.tsx` | Popup datos del cliente desde Historial |
+| `operario-ruta-map-modal.tsx` | Mapa + drag-and-drop reorder |
+| `operario-ruta-detalle-modal.tsx` | Detalle + suspender/reactivar |
+| `operario-kpis-dashboard.tsx` | Secciones KPI + gráfico recaudación |
+| `operario-kpis-filtro-fechas.tsx` | Presets y rango `desde`/`hasta` → `/panel/kpis?...` |
+| `operario-kpi-recaudacion-chart.tsx` | Gráfico barras por día |
+| `operario-kpi-por-zona-table.tsx` | Desglose por zona |
+| Modales de edición de ruta y recolección | |
+| `operario-parametros-sistema.tsx` | Precio de bolsa extra |
 
-Datos: `src/lib/data/operario-dashboard.ts` (admin client, hasta ~200 rutas).
+Datos:
+
+- `src/lib/data/operario-dashboard.ts` — Operativo / Historial (~200 rutas por vista)
+- `src/lib/data/operario-kpis.ts` — KPIs: rutas por `fecha` en rango, `.limit(5000)` + recolecciones de esas rutas
+
+Dominio KPI: `src/lib/domain/operario-kpis.ts` (`resolveKpiFiltroFechas`, `buildOperarioKpis`, constante `KPI_LABEL_SERVICIOS` = `"Recolecciones (servicios)"`).
+
+Exportación CSV (cliente):
+
+- `src/lib/domain/csv-download.ts` — `downloadCsvFile()` (UTF-8 BOM, `;` separador)
+- `src/lib/domain/operario-kpis-export.ts` — filas del dashboard KPI
+- `src/lib/domain/operario-historial-export.ts` — rutas + recolecciones del historial
+
+Navegación staff: `panel-shell.tsx` — enlaces Operativo, KPIs, Historial, Parámetros, Usuarios. Middleware permite `/panel/historial` y `/panel/kpis` solo a staff.
 
 ### Parámetros de sistema
 
@@ -340,8 +377,20 @@ Componentes en `src/components/panel/recolector/`:
 
 Dominio: `src/lib/domain/recolector-ruta.ts`, `recolector-recoleccion-form.ts`, `recolector-rutas-list.ts`, `ruta-estado-transiciones.ts`
 
-**Estados de ruta:** `borrador`, `activa`, `en_curso`, `completada`, `cancelada`, `suspendida`  
+**Estados de ruta:** `borrador`, `activa`, `en_curso`, `completada` (UI: Realizado), `cerrada` (Historial), `cancelada`, `suspendida`
+
+```
+Operativo                          Historial
+─────────                          ─────────
+borrador, activa, en_curso    →    cerrada (POST cierre-operario desde completada)
+completada, suspendida             cancelada
+```
+
+Transiciones staff: `src/lib/domain/ruta-estado-transiciones.ts` (`puedeSuspenderRuta`, `puedeReactivarRuta`, `puedeCierreOperario`, `limpiezaTrasReactivar`).
+
 **Estados de parada:** `pendiente`, `en_camino`, `visitada`, `omitida`, `cancelada`
+
+**Bloqueos recolector:** no editar carga si parada ya `visitada`/`cancelada`; no PATCH campo si ruta `completada`, `cerrada`, `cancelada` o `suspendida` (API + UI read-only).
 
 #### Finalizar ruta (recolector)
 
@@ -357,6 +406,7 @@ Flujo:
 3. `POST /api/recolector/rutas/[id]/finalizar` con body de cierre
 4. Ruta pasa a `completada`, se guarda `cierre_recolector_at` y datos de cierre
 5. UI redirige a `/panel`
+6. Staff puede aplicar **Cierre operario** → `cerrada` (Historial); hasta entonces la ruta sigue en Operativo
 
 Body de cierre (`recolector-cierre-ruta.ts`):
 
@@ -391,12 +441,19 @@ Función `getInicioJornadaAt()` en `recolector-ruta.ts`:
 
 Usada en detalle recolector, formulario de campo, API PATCH de carga y evaluación de finalizar.
 
-#### Suspender ruta (staff)
+#### Suspender, reactivar y cierre operario (staff)
 
-- Staff suspende desde tabla operario (**Suspender**) o modal **Ver detalle**
-- `POST /api/panel/rutas/[id]/suspender` — solo desde `activa`, `en_curso` o `borrador`
-- Recolector no puede iniciar, cargar paradas ni finalizar mientras esté suspendida
-- `DELETE /api/panel/rutas/[id]/suspender` reactiva: vuelve a `en_curso` si ya tenía inicio de jornada, si no a `activa`
+- **Suspender:** `POST .../suspender` desde `borrador`, `activa`, `en_curso` → `suspendida`
+- **Reactivar:** `DELETE .../suspender` desde `completada` o `suspendida` → `en_curso`; aplica `limpiezaTrasReactivar()` (borra `cierre_operario_*`; si venía de `completada`, también cierre recolector y gastos)
+- **Cierre operario:** `POST .../cierre-operario` desde `completada` → `cerrada`; solo en Operativo (no en Historial)
+- Recolector bloqueado en `suspendida`, `completada`, `cerrada`, `cancelada`
+
+#### KPIs (staff)
+
+- Página: `src/app/panel/kpis/page.tsx` — query `periodo` | `desde` + `hasta`
+- Filtro: `resolveKpiFiltroFechas()` — si `desde` y `hasta` válidos, rango custom; si no, preset (`7d`, `30d`, `mes`, `90d`)
+- Agregación en memoria sobre rutas del rango (por `rutas.fecha`) y sus `ruta_recolecciones`
+- Export: botón en `operario-kpis-dashboard.tsx` → `operario-kpis-export.ts`
 
 #### Validación de pagos en campo
 
@@ -413,7 +470,7 @@ Al crear/editar parada desde el panel (`operario-recoleccion-form-modal.tsx`), c
 
 Parser: `parseRecoleccionFields()` en `operario-crud.ts`.
 
-**Restricción:** no se puede agregar parada a ruta `completada` (409 en API; botón deshabilitado en UI).
+**Restricción:** no se puede agregar/editar parada en ruta `completada` o `cerrada` (409 en API; botón deshabilitado en UI). En Historial las tablas son solo lectura.
 
 #### UX: botones deshabilitados
 
@@ -499,7 +556,11 @@ npm run start    # Servidor de producción local
 | Finalizar ruta (dominio) | `src/lib/domain/recolector-finalizar-ruta.ts` |
 | Cierre de ruta (dominio) | `src/lib/domain/recolector-cierre-ruta.ts` |
 | Formulario cierre recolector | `src/components/panel/recolector/recolector-finalizar-ruta-form.tsx` |
-| Suspensión de rutas | `src/lib/domain/ruta-estado-transiciones.ts` |
+| Estados ruta / historial / reactivar | `src/lib/domain/ruta-estado-transiciones.ts` |
+| KPIs y filtros de fecha | `src/lib/domain/operario-kpis.ts` |
+| Fetch KPIs | `src/lib/data/operario-kpis.ts` |
+| Export CSV KPIs / Historial | `operario-kpis-export.ts`, `operario-historial-export.ts`, `csv-download.ts` |
+| Cierre operario API | `src/app/api/panel/rutas/[id]/cierre-operario/route.ts` |
 | Listado recolector por categoría | `src/lib/domain/recolector-rutas-list.ts` |
 | Precio bolsa extra | `src/lib/domain/sistema-parametros.ts` |
 | Permisos | `src/lib/auth/permissions.ts` |
