@@ -16,12 +16,16 @@ export type RecoleccionCampoFormData = {
   orden: number;
   direccion: string;
   nombre: string;
+  unidad: string | null;
+  tipoServicio: string | null;
   horaProgramada: string;
   observaciones: string | null;
   precioRetiro: number;
   precioRetiroLabel: string;
   precioBolsaExtra: number;
   precioBolsaExtraLabel: string;
+  precioRetiroReciclableMixto: number;
+  precioRetiroReciclableMixtoLabel: string;
   estadoLabel: string;
   motivoCancelacion: string;
   bolsasLlenas: string;
@@ -40,7 +44,7 @@ export type RecoleccionCampoFormData = {
 export function buildRecoleccionCampoFormData(
   rutaId: string,
   item: RecoleccionRow,
-  precioBolsaExtra = 0,
+  precios: { bolsaExtra: number; retiroReciclableMixto: number },
   estadoRuta: RutaEstado = "en_curso",
 ): RecoleccionCampoFormData {
   const precioRetiro = parsePrecioRetiro(item.precio);
@@ -53,12 +57,16 @@ export function buildRecoleccionCampoFormData(
     orden: item.orden,
     direccion: item.direccion,
     nombre: item.nombre,
+    unidad: item.unidad,
+    tipoServicio: item.tipo_servicio,
     horaProgramada: String(item.hora).slice(0, 5),
     observaciones: item.observaciones,
     precioRetiro,
     precioRetiroLabel: formatPrecioDisplay(precioRetiro),
-    precioBolsaExtra,
-    precioBolsaExtraLabel: formatParametroMoney(precioBolsaExtra),
+    precioBolsaExtra: precios.bolsaExtra,
+    precioBolsaExtraLabel: formatParametroMoney(precios.bolsaExtra),
+    precioRetiroReciclableMixto: precios.retiroReciclableMixto,
+    precioRetiroReciclableMixtoLabel: formatParametroMoney(precios.retiroReciclableMixto),
     estadoLabel: RECOLECCION_OPERATIVA_LABELS[item.estado_operativo],
     motivoCancelacion: item.motivo_cancelacion ?? item.detalle ?? "",
     bolsasLlenas: item.bolsas_llenas != null ? String(item.bolsas_llenas) : "",

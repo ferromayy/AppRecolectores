@@ -5,7 +5,7 @@ Documentación de onboarding técnico para quien se sume al proyecto. Cubre stac
 **Producción:** https://app-recolectores.vercel.app  
 **Manual de uso (no técnico):** [MANUAL_USUARIO.md](./MANUAL_USUARIO.md)
 
-**Cambios recientes (jun 2026):** vistas `/panel/historial` y `/panel/kpis`, estado `cerrada`, API cierre operario, reactivar desde `completada`, export CSV, tablas historial ampliadas.
+**Cambios recientes (jun 2026):** Operativo / Historial / KPIs / Parámetros; estado `cerrada` y cierre operario; reactivar; export CSV; columnas `unidad` y `tipo_servicio` en tablas; reglas de cobro Empresa / Mixto / estándar; cuatro claves en `sistema_precio_historial`; API genérica `/api/panel/parametros/[clave]`.
 
 ---
 
@@ -223,7 +223,7 @@ Matriz resumida (`src/lib/auth/permissions.ts`):
 | `/panel` | superadmin, admin | **Operativo:** rutas no historial (activas, en curso, realizadas, suspendidas) |
 | `/panel/historial` | superadmin, admin | Rutas `cerrada` o `cancelada`; tablas ampliadas + export CSV |
 | `/panel/kpis` | superadmin, admin | KPIs por período (presets o `?desde=&hasta=`) + export CSV |
-| `/panel/parametros` | superadmin, admin | Precio de bolsa extra (historial con vigencia) |
+| `/panel/parametros` | superadmin, admin | Cuatro precios con historial (`operario-parametros-sistema.tsx`) |
 | `/panel/usuarios` | superadmin, admin | Alta y gestión de usuarios |
 | `/panel/mis-rutas` | recolector | Rutas asignadas (Activas / Completadas / Suspendidas) |
 | `/panel/mis-rutas/[id]` | recolector | Detalle de ruta + lista de paradas + botón **Finalizar ruta** |
@@ -266,7 +266,7 @@ Aliases que redirigen: `/panel/rutas`, `/panel/recolecciones`, `/admin/usuarios`
 | DELETE | `/api/panel/rutas/[id]/recolecciones/[recoleccionId]` | Eliminar parada |
 | PATCH | `/api/panel/rutas/[id]/recolecciones/reorden` | Reordenar (`{ orden: string[] }`) |
 | GET | `/api/panel/rutas/[id]/mapa` | Puntos geocodificados para mapa |
-| GET/POST | `/api/panel/parametros/bolsa-extra` | Consultar historial / agregar nuevo precio vigente |
+| GET/POST | `/api/panel/parametros/[clave]` | Historial y alta de precio (`bolsa-extra`, `retiro-reciclable-mixto`, `bolsa-punto`, `bolsa-llena-punto`) |
 
 ### Recolector
 
@@ -280,7 +280,7 @@ Validación de carga en campo: `src/lib/domain/recolector-recoleccion-campo.ts`
 Validación inicio de ruta: `src/lib/domain/ruta-insumos.ts`  
 Validación finalizar ruta: `src/lib/domain/recolector-finalizar-ruta.ts`  
 Validación cierre de ruta: `src/lib/domain/recolector-cierre-ruta.ts`  
-Precio total a cobrar (bolsa extra): `src/lib/domain/sistema-parametros.ts`
+Precio total a cobrar (reglas Empresa / Mixto / estándar): `src/lib/domain/sistema-parametros.ts` (`calcPrecioTotalCobrarConReglas`, `buildPrecioCobroDetalle`)
 
 ### Integración Sheets
 
@@ -317,8 +317,8 @@ Componentes en `src/components/panel/operario/`:
 | `operario-dashboard.tsx` | Orquestador Operativo / Historial; cierre operario, export historial |
 | `operario-rutas-table.tsx` | Tabla Operativo (Suspender, Reactivar, Cierre operario) |
 | `operario-historial-rutas-table.tsx` | Tabla Historial (columnas ampliadas, insumos) |
-| `operario-recolecciones-table.tsx` | Paradas en Operativo (editable) |
-| `operario-historial-recolecciones-table.tsx` | Paradas en Historial (orden de columnas fijo) |
+| `operario-recolecciones-table.tsx` | Paradas en Operativo (editable; columnas `unidad`, `tipo_servicio`) |
+| `operario-historial-recolecciones-table.tsx` | Paradas en Historial (incl. `unidad`, `tipo_servicio` tras hora real) |
 | `operario-cliente-detalle-modal.tsx` | Popup datos del cliente desde Historial |
 | `operario-ruta-map-modal.tsx` | Mapa + drag-and-drop reorder |
 | `operario-ruta-detalle-modal.tsx` | Detalle + suspender/reactivar |
@@ -327,7 +327,8 @@ Componentes en `src/components/panel/operario/`:
 | `operario-kpi-recaudacion-chart.tsx` | Gráfico barras por día |
 | `operario-kpi-por-zona-table.tsx` | Desglose por zona |
 | Modales de edición de ruta y recolección | |
-| `operario-parametros-sistema.tsx` | Precio de bolsa extra |
+| `operario-parametros-sistema.tsx` | Orquesta secciones de precios (`PARAMETRO_PRECIO_ORDEN`) |
+| `operario-parametro-precio-section.tsx` | Bloque reutilizable por parámetro (form + historial) |
 
 Datos:
 
@@ -346,20 +347,43 @@ Navegación staff: `panel-shell.tsx` — enlaces Operativo, KPIs, Historial, Par
 
 ### Parámetros de sistema
 
-Ruta `/panel/parametros` (staff). Tabla `sistema_precio_historial`:
+Ruta `/panel/parametros` (staff). Tabla `sistema_precio_historial` (migración `20260525120000`); una fila activa por `clave` (`vigencia_hasta IS NULL`).
 
-- Clave `bolsa_extra`: precio unitario de cada bolsa llena **por encima de las 2 incluidas**
-- Solo se puede **agregar** un nuevo precio (no editar el historial); el anterior queda con `vigente_hasta`
-- El precio activo se usa en el formulario de campo del recolector y en la API PATCH de carga
+| Slug API | Clave DB | Uso en app |
+|----------|----------|------------|
+| `bolsa-extra` | `bolsa_extra` | Cobro estándar y Mixto 3+ bolsas |
+| `retiro-reciclable-mixto` | `retiro_reciclable_mixto` | Cobro Mixto (1–2 bolsas incluidas en un solo monto) |
+| `bolsa-punto` | `bolsa_punto` | Configurado; pendiente de lógica de cobro |
+| `bolsa-llena-punto` | `bolsa_llena_punto` | Configurado; pendiente de lógica de cobro |
 
-Fórmula del total a cobrar:
+Constantes y UI: `PARAMETRO_PRECIO_SLUGS`, `PARAMETRO_PRECIO_ORDEN`, `PARAMETRO_PRECIO_UI` en `sistema-parametros.ts`.
 
-```
-Total = Precio retiro + (Precio bolsa extra × max(0, bolsas_llenas − 2))
-```
+- Alta: `POST /api/panel/parametros/[clave]` con `{ precio }` — cierra vigente anterior e inserta nueva fila
+- Lectura activa: `fetchPrecioActivoByClave(clave)` o helpers (`fetchPrecioBolsaExtraActivo`, etc.)
+- Página: `src/app/panel/parametros/page.tsx` carga historial de las cuatro claves en paralelo
 
-Dominio: `src/lib/domain/sistema-parametros.ts`  
-Datos: `src/lib/data/sistema-parametros.ts`
+### Reglas de cobro en campo (recolector)
+
+Entrada: `PrecioCobroInput` (`unidad`, `tipoServicio`, `precioRetiro` de planilla, `precioBolsaExtra`, `precioRetiroReciclableMixto`, `bolsasLlenas`).
+
+Resolución de regla (`resolvePrecioCobroRegla`): **Empresa** gana sobre Mixto si ambos aplican.
+
+| Regla | Condición | Total |
+|-------|-----------|-------|
+| `empresa` | `unidad === "Empresa"` (case-insensitive) | `precioRetiro` |
+| `mixto` | `tipo_servicio === "Mixto"` | `0 bolsas` → `precioRetiro`; `1–2` → `precioRetiroReciclableMixto`; `3+` → mixto + `bolsaExtra × (bolsas−2)` |
+| `estandar` | resto | `precioRetiro + bolsaExtra × max(0, bolsas−2)` |
+
+Implementación: `calcPrecioTotalCobrarConReglas`, `buildPrecioCobroDetalle` en `sistema-parametros.ts`.
+
+Consumidores:
+
+- UI: `recolector-recoleccion-campo-form.tsx` (desglose y `ayudaCobro`)
+- API: `parseRecoleccionCampoBody` en `recolector-recoleccion-campo.ts` — valida suma de pagos ≥ total
+- Página: `mis-rutas/.../recoleccionId/page.tsx` — fetch `fetchPrecioBolsaExtraActivo` + `fetchPrecioRetiroReciclableMixtoActivo`
+- PATCH: `api/recolector/.../campo/route.ts` — mismos precios en servidor
+
+Enums de planilla (`sheet-recoleccion-validation.ts`): `UNIDADES` = Hogar, Empresa, Puntos; `TIPOS_SERVICIO` = Reciclaje, Mixto, Organico.
 
 ### Panel recolector
 
@@ -372,7 +396,7 @@ Componentes en `src/components/panel/recolector/`:
 | `recolector-ruta-detalle.tsx` | Detalle, Maps, lista de paradas, botón **Finalizar ruta** |
 | `recolector-finalizar-ruta-form.tsx` | Formulario de cierre antes de finalizar |
 | `recolector-inicio-ruta-form.tsx` | Km + insumos |
-| `recolector-recoleccion-campo-form.tsx` | Carga por parada (con desglose de bolsa extra) |
+| `recolector-recoleccion-campo-form.tsx` | Carga por parada (desglose según regla empresa/mixto/estándar) |
 | `recolector-recoleccion-sheet.tsx` | Preview read-only (ruta no iniciada) |
 
 Dominio: `src/lib/domain/recolector-ruta.ts`, `recolector-recoleccion-form.ts`, `recolector-rutas-list.ts`, `ruta-estado-transiciones.ts`
@@ -562,7 +586,10 @@ npm run start    # Servidor de producción local
 | Export CSV KPIs / Historial | `operario-kpis-export.ts`, `operario-historial-export.ts`, `csv-download.ts` |
 | Cierre operario API | `src/app/api/panel/rutas/[id]/cierre-operario/route.ts` |
 | Listado recolector por categoría | `src/lib/domain/recolector-rutas-list.ts` |
-| Precio bolsa extra | `src/lib/domain/sistema-parametros.ts` |
+| Precios de sistema (claves, slugs API) | `src/lib/domain/sistema-parametros.ts` |
+| Fetch precio activo / historial | `src/lib/data/sistema-parametros.ts` |
+| Cobro en campo (parse + reglas) | `src/lib/domain/recolector-recoleccion-campo.ts` |
+| Formulario campo recolector | `src/lib/domain/recolector-recoleccion-form.ts` |
 | Permisos | `src/lib/auth/permissions.ts` |
 
 Si algo no está documentado aquí, buscá en `docs/` o en el código bajo `src/lib/domain/` — ahí vive la lógica de negocio explícita.

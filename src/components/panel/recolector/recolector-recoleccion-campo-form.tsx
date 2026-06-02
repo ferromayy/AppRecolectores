@@ -8,7 +8,10 @@ import {
   type RecoleccionCampoFormData,
 } from "@/lib/domain/recolector-recoleccion-form";
 import { formatPrecioDisplay } from "@/lib/domain/recolector-recoleccion-campo";
-import { buildPrecioCobroDetalle } from "@/lib/domain/sistema-parametros";
+import {
+  buildPrecioCobroDetalle,
+  type PrecioCobroDetalle,
+} from "@/lib/domain/sistema-parametros";
 
 type Props = {
   data: RecoleccionCampoFormData;
@@ -39,8 +42,22 @@ export function RecolectorRecoleccionCampoForm({ data, rutaNombre }: Props) {
     bolsasLlenas.trim() === "" ? 0 : Number.parseInt(bolsasLlenas, 10) || 0;
   const cobroDetalle = useMemo(
     () =>
-      buildPrecioCobroDetalle(data.precioRetiro, data.precioBolsaExtra, bolsasLlenasNum),
-    [data.precioRetiro, data.precioBolsaExtra, bolsasLlenasNum],
+      buildPrecioCobroDetalle({
+        unidad: data.unidad,
+        tipoServicio: data.tipoServicio,
+        precioRetiro: data.precioRetiro,
+        precioBolsaExtra: data.precioBolsaExtra,
+        precioRetiroReciclableMixto: data.precioRetiroReciclableMixto,
+        bolsasLlenas: bolsasLlenasNum,
+      }),
+    [
+      data.unidad,
+      data.tipoServicio,
+      data.precioRetiro,
+      data.precioBolsaExtra,
+      data.precioRetiroReciclableMixto,
+      bolsasLlenasNum,
+    ],
   );
   const precioRetiroLabel = useMemo(
     () => formatPrecioDisplay(data.precioRetiro),
@@ -151,6 +168,10 @@ export function RecolectorRecoleccionCampoForm({ data, rutaNombre }: Props) {
           <dl className="mt-3 space-y-2 text-sm">
             <ReadOnlyRow label="Dirección" value={data.direccion} />
             <ReadOnlyRow label="Cliente" value={data.nombre} />
+            {data.unidad && <ReadOnlyRow label="Unidad" value={data.unidad} />}
+            {data.tipoServicio && (
+              <ReadOnlyRow label="Tipo de servicio" value={data.tipoServicio} />
+            )}
             <ReadOnlyRow label="Hora programada" value={data.horaProgramada} />
             <ReadOnlyRow label="Observaciones" value={data.observaciones || "—"} />
           </dl>
@@ -196,30 +217,15 @@ export function RecolectorRecoleccionCampoForm({ data, rutaNombre }: Props) {
               <h2 className="mb-3 text-sm font-semibold text-zinc-900 dark:text-zinc-50">
                 Cobro
               </h2>
-              <dl className="mb-4 space-y-2 text-sm">
-                <ReadOnlyRow label="Precio de retiro" value={precioRetiroLabel} />
-                {cobroDetalle.bolsasExtra > 0 && (
-                  <>
-                    <ReadOnlyRow
-                      label="Bolsa extra"
-                      value={data.precioBolsaExtraLabel}
-                    />
-                    <ReadOnlyRow
-                      label="Cargo bolsa extra"
-                      value={`${cobroDetalle.bolsaExtraDetalleLabel} = ${cobroDetalle.montoBolsaExtraLabel}`}
-                    />
-                  </>
-                )}
-                <ReadOnlyRow
-                  label="Precio total a cobrar"
-                  value={cobroDetalle.precioTotalLabel}
-                />
-              </dl>
+              <CobroDetalleRows
+                cobroDetalle={cobroDetalle}
+                precioRetiroLabel={precioRetiroLabel}
+                precioBolsaExtraLabel={data.precioBolsaExtraLabel}
+              />
+              <p className="mb-3 text-xs text-zinc-500">{cobroDetalle.ayudaCobro}</p>
               <p className="mb-3 text-xs text-zinc-500">
-                Desde la 3.ª bolsa llena se suma el precio de bolsa extra por cada bolsa
-                adicional. Los tres montos son obligatorios (podés poner{" "}
-                <strong>0</strong>). La suma no puede ser menor al total a cobrar (puede ser
-                mayor).
+                Los tres montos son obligatorios (podés poner <strong>0</strong>). La suma no
+                puede ser menor al total a cobrar (puede ser mayor).
               </p>
               <div className="space-y-3">
                 <MoneyField
@@ -328,18 +334,12 @@ function RecoleccionCampoSoloLectura({
             <h2 className="mb-3 text-sm font-semibold text-zinc-900 dark:text-zinc-50">
               Cobro
             </h2>
+            <CobroDetalleRows
+              cobroDetalle={cobroDetalle}
+              precioRetiroLabel={precioRetiroLabel}
+              precioBolsaExtraLabel={data.precioBolsaExtraLabel}
+            />
             <dl className="space-y-2 text-sm">
-              <ReadOnlyRow label="Precio de retiro" value={precioRetiroLabel} />
-              {cobroDetalle.bolsasExtra > 0 && (
-                <>
-                  <ReadOnlyRow label="Bolsa extra" value={data.precioBolsaExtraLabel} />
-                  <ReadOnlyRow
-                    label="Cargo bolsa extra"
-                    value={`${cobroDetalle.bolsaExtraDetalleLabel} = ${cobroDetalle.montoBolsaExtraLabel}`}
-                  />
-                </>
-              )}
-              <ReadOnlyRow label="Precio total" value={cobroDetalle.precioTotalLabel} />
               <ReadOnlyRow label="Efectivo" value={data.montoEfectivo} />
               <ReadOnlyRow label="Transferencia" value={data.montoTransferencia} />
               <ReadOnlyRow label="QR" value={data.montoQr} />
@@ -359,6 +359,64 @@ function RecoleccionCampoSoloLectura({
         </dl>
       </section>
     </div>
+  );
+}
+
+function CobroDetalleRows({
+  cobroDetalle,
+  precioRetiroLabel,
+  precioBolsaExtraLabel,
+}: {
+  cobroDetalle: PrecioCobroDetalle;
+  precioRetiroLabel: string;
+  precioBolsaExtraLabel: string;
+}) {
+  return (
+    <dl className="mb-4 space-y-2 text-sm">
+      {cobroDetalle.regla === "empresa" ? (
+        <ReadOnlyRow label="Precio de retiro (planilla)" value={precioRetiroLabel} />
+      ) : cobroDetalle.regla === "mixto" ? (
+        <>
+          {cobroDetalle.bolsasLlenas === 0 ? (
+            <ReadOnlyRow label="Precio de retiro (planilla)" value={precioRetiroLabel} />
+          ) : (
+            <>
+              <ReadOnlyRow
+                label="Retiro reciclable mixto"
+                value={cobroDetalle.montoRetiroMixtoLabel}
+              />
+              <ReadOnlyRow
+                label="Incluye"
+                value="Hasta 2 bolsas llenas (mismo total con 1 o 2)"
+              />
+              {cobroDetalle.bolsasExtra > 0 && (
+                <>
+                  <ReadOnlyRow label="Bolsa extra" value={precioBolsaExtraLabel} />
+                  <ReadOnlyRow
+                    label="Cargo bolsa extra"
+                    value={`${cobroDetalle.bolsaExtraDetalleLabel} = ${cobroDetalle.montoBolsaExtraLabel}`}
+                  />
+                </>
+              )}
+            </>
+          )}
+        </>
+      ) : (
+        <>
+          <ReadOnlyRow label="Precio de retiro" value={precioRetiroLabel} />
+          {cobroDetalle.bolsasExtra > 0 && (
+            <>
+              <ReadOnlyRow label="Bolsa extra" value={precioBolsaExtraLabel} />
+              <ReadOnlyRow
+                label="Cargo bolsa extra"
+                value={`${cobroDetalle.bolsaExtraDetalleLabel} = ${cobroDetalle.montoBolsaExtraLabel}`}
+              />
+            </>
+          )}
+        </>
+      )}
+      <ReadOnlyRow label="Precio total a cobrar" value={cobroDetalle.precioTotalLabel} />
+    </dl>
   );
 }
 

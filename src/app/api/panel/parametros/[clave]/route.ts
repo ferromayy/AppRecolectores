@@ -1,20 +1,28 @@
 import { NextResponse } from "next/server";
 
 import { requireStaff } from "@/lib/auth/session";
-import { fetchPrecioBolsaExtraHistorial } from "@/lib/data/sistema-parametros";
+import { fetchPrecioHistorialByClave } from "@/lib/data/sistema-parametros";
 import {
-  PRECIO_BOLSA_EXTRA_CLAVE,
   parseNuevoPrecioBody,
+  resolveParametroPrecioClave,
 } from "@/lib/domain/sistema-parametros";
 import { createAdminClient } from "@/lib/supabase/admin";
 
-export async function GET() {
+type Props = { params: Promise<{ clave: string }> };
+
+export async function GET(_request: Request, { params }: Props) {
   const auth = await requireStaff();
   if (!auth.ok) {
     return NextResponse.json({ ok: false, error: auth.message }, { status: auth.status });
   }
 
-  const { items, error } = await fetchPrecioBolsaExtraHistorial();
+  const { clave: slug } = await params;
+  const clave = resolveParametroPrecioClave(slug);
+  if (!clave) {
+    return NextResponse.json({ ok: false, error: "Parámetro no encontrado" }, { status: 404 });
+  }
+
+  const { items, error } = await fetchPrecioHistorialByClave(clave);
   if (error) {
     return NextResponse.json({ ok: false, error }, { status: 500 });
   }
@@ -23,10 +31,16 @@ export async function GET() {
   return NextResponse.json({ ok: true, activo, historial: items });
 }
 
-export async function POST(request: Request) {
+export async function POST(request: Request, { params }: Props) {
   const auth = await requireStaff();
   if (!auth.ok) {
     return NextResponse.json({ ok: false, error: auth.message }, { status: auth.status });
+  }
+
+  const { clave: slug } = await params;
+  const clave = resolveParametroPrecioClave(slug);
+  if (!clave) {
+    return NextResponse.json({ ok: false, error: "Parámetro no encontrado" }, { status: 404 });
   }
 
   let body: Record<string, unknown>;
@@ -54,7 +68,7 @@ export async function POST(request: Request) {
   const { data: activoActual } = await admin
     .from("sistema_precio_historial")
     .select("id, precio")
-    .eq("clave", PRECIO_BOLSA_EXTRA_CLAVE)
+    .eq("clave", clave)
     .is("vigencia_hasta", null)
     .maybeSingle();
 
@@ -77,7 +91,7 @@ export async function POST(request: Request) {
   }
 
   const { error: insertError } = await admin.from("sistema_precio_historial").insert({
-    clave: PRECIO_BOLSA_EXTRA_CLAVE,
+    clave,
     precio: parsed.precio,
     vigencia_desde,
     vigencia_hasta: null,
@@ -88,7 +102,7 @@ export async function POST(request: Request) {
     return NextResponse.json({ ok: false, error: insertError.message }, { status: 500 });
   }
 
-  const { items, error } = await fetchPrecioBolsaExtraHistorial();
+  const { items, error } = await fetchPrecioHistorialByClave(clave);
   if (error) {
     return NextResponse.json({ ok: true, message: "Precio registrado" });
   }

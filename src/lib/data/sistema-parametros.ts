@@ -1,8 +1,12 @@
 import {
   buildPrecioHistorialItem,
   PRECIO_BOLSA_EXTRA_CLAVE,
+  PRECIO_BOLSA_LLENA_PUNTO_CLAVE,
+  PRECIO_BOLSA_PUNTO_CLAVE,
+  PRECIO_RETIRO_RECICLABLE_MIXTO_CLAVE,
   type PrecioHistorialItem,
   type PrecioHistorialRow,
+  type PrecioParametroClave,
 } from "@/lib/domain/sistema-parametros";
 import { createAdminClient } from "@/lib/supabase/admin";
 
@@ -16,7 +20,9 @@ type HistorialDbRow = {
   created_at: string;
 };
 
-export async function fetchPrecioBolsaExtraHistorial(): Promise<{
+export async function fetchPrecioHistorialByClave(
+  clave: PrecioParametroClave,
+): Promise<{
   items: PrecioHistorialItem[];
   error: string | null;
 }> {
@@ -25,7 +31,7 @@ export async function fetchPrecioBolsaExtraHistorial(): Promise<{
     const { data, error } = await admin
       .from("sistema_precio_historial")
       .select("id, clave, precio, vigencia_desde, vigencia_hasta, created_by, created_at")
-      .eq("clave", PRECIO_BOLSA_EXTRA_CLAVE)
+      .eq("clave", clave)
       .order("vigencia_desde", { ascending: false });
 
     if (error) {
@@ -74,13 +80,13 @@ export async function fetchPrecioBolsaExtraHistorial(): Promise<{
   }
 }
 
-export async function fetchPrecioBolsaExtraActivo(): Promise<number> {
+export async function fetchPrecioActivoByClave(clave: PrecioParametroClave): Promise<number> {
   try {
     const admin = createAdminClient();
     const { data, error } = await admin
       .from("sistema_precio_historial")
       .select("precio")
-      .eq("clave", PRECIO_BOLSA_EXTRA_CLAVE)
+      .eq("clave", clave)
       .is("vigencia_hasta", null)
       .maybeSingle();
 
@@ -90,4 +96,36 @@ export async function fetchPrecioBolsaExtraActivo(): Promise<number> {
   } catch {
     return 0;
   }
+}
+
+export function fetchPrecioBolsaExtraHistorial() {
+  return fetchPrecioHistorialByClave(PRECIO_BOLSA_EXTRA_CLAVE);
+}
+
+export function fetchPrecioRetiroReciclableMixtoHistorial() {
+  return fetchPrecioHistorialByClave(PRECIO_RETIRO_RECICLABLE_MIXTO_CLAVE);
+}
+
+export function fetchPrecioBolsaExtraActivo() {
+  return fetchPrecioActivoByClave(PRECIO_BOLSA_EXTRA_CLAVE);
+}
+
+export function fetchPrecioRetiroReciclableMixtoActivo() {
+  return fetchPrecioActivoByClave(PRECIO_RETIRO_RECICLABLE_MIXTO_CLAVE);
+}
+
+export function fetchPrecioBolsaPuntoHistorial() {
+  return fetchPrecioHistorialByClave(PRECIO_BOLSA_PUNTO_CLAVE);
+}
+
+export function fetchPrecioBolsaLlenaPuntoHistorial() {
+  return fetchPrecioHistorialByClave(PRECIO_BOLSA_LLENA_PUNTO_CLAVE);
+}
+
+export function fetchPrecioBolsaPuntoActivo() {
+  return fetchPrecioActivoByClave(PRECIO_BOLSA_PUNTO_CLAVE);
+}
+
+export function fetchPrecioBolsaLlenaPuntoActivo() {
+  return fetchPrecioActivoByClave(PRECIO_BOLSA_LLENA_PUNTO_CLAVE);
 }

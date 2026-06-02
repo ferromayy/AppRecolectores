@@ -16,7 +16,7 @@ Guía para usuarios de la app **sin conocimientos de programación**. Explica qu
 6. [Planilla Google Sheets](#6-planilla-google-sheets)
 7. [Problemas frecuentes](#7-problemas-frecuentes)
 
-**Novedades recientes (junio 2026):** menú **Historial** y **KPIs**, estado **Cerrada** (cierre operario), **Reactivar** y **Cierre operario** en Operativo, tablas ampliadas en Historial, popup de datos del cliente, filtros de fechas y descarga CSV en KPIs e Historial, bloqueos de edición en recolector tras guardar o cerrar ruta.
+**Novedades recientes (junio 2026):** menús **Operativo**, **Historial**, **KPIs** y **Parámetros**; estado **Cerrada** y **Cierre operario**; **Reactivar** en Operativo; exportación **CSV**; tablas con **Unidad** y **Tipo de servicio**; reglas de cobro por **Empresa** / **Mixto** / estándar; cuatro precios configurables en Parámetros (bolsa extra, retiro mixto, bolsa punto, bolsa llena punto).
 
 ---
 
@@ -49,7 +49,7 @@ Guía para usuarios de la app **sin conocimientos de programación**. Explica qu
 | Ver panel operativo (rutas, mapas, recolecciones) | ✅ | ✅ | ❌ |
 | Ver **Historial** (rutas cerradas / canceladas) | ✅ | ✅ | ❌ |
 | Ver **KPIs** (indicadores y exportación) | ✅ | ✅ | ❌ |
-| Configurar **precio de bolsa extra** | ✅ | ✅ | ❌ |
+| Configurar **Parámetros** (precios del sistema) | ✅ | ✅ | ❌ |
 | Suspender / reactivar / cierre operario en rutas | ✅ | ✅ | ❌ |
 | Descargar CSV (KPIs e Historial) | ✅ | ✅ | ❌ |
 | Crear usuarios **operario** | ✅ | ❌ | ❌ |
@@ -66,6 +66,16 @@ Guía para usuarios de la app **sin conocimientos de programación**. Explica qu
 ## 3. Superadmin
 
 El superadmin es la cuenta principal de administración (`somos@ecolink.com.ar`). Configura la app, crea operarios y recolectores, y supervisa todo el operativo.
+
+### Menú superior (staff)
+
+| Menú | Ruta | Para qué |
+|------|------|----------|
+| **Operativo** | `/panel` | Rutas en curso, realizadas, suspendidas |
+| **KPIs** | `/panel/kpis` | Indicadores y exportación |
+| **Historial** | `/panel/historial` | Rutas cerradas o canceladas |
+| **Parámetros** | `/panel/parametros` | Precios globales con historial |
+| **Usuarios** | `/panel/usuarios` | Alta y gestión de cuentas |
 
 ### 3.1 Panel operativo
 
@@ -102,7 +112,7 @@ Seleccioná una fila para ver sus servicios abajo.
 
 Misma ruta seleccionada arriba. Columnas (en este orden):
 
-Horario · Recolector · Nombre cliente · Horario programado · Hora real · Zona · Cant. biotachos · Cant. bolsas · Precio total · Montos (efectivo, transferencia, QR) · Estado · Motivo cancelación · Observaciones · Detalle · Firma · Firmante
+Horario · Recolector · Nombre cliente · Horario programado · Hora real · **Unidad** · **Tipo de servicio** · Zona · Cant. biotachos · Cant. bolsas · Precio total · Montos (efectivo, transferencia, QR) · Estado · Motivo cancelación · Observaciones · Detalle · Firma · Firmante
 
 **Datos del cliente:** tocá el nombre del cliente, **Info**, la zona o el horario programado → se abre un popup con dirección, teléfono, tipo de servicio, frecuencia, cobros y más.
 
@@ -168,15 +178,21 @@ Lista las rutas del contexto actual (operativas o historial). Cada fila muestra,
 
 > En **Historial** no aparecen Editar, Suspender, Reactivar ni Cierre operario.
 
-#### Tabla **Recolecciones (servicios)** (solo en Operativo)
+#### Tabla **Recolecciones (servicios)** (Operativo e Historial)
 
 Muestra las paradas de la **ruta seleccionada** arriba.
 
-| Acción | Qué hace |
-|--------|----------|
-| **Editar** | Modificar datos de la parada (dirección, hora, precio, etc.) |
-| **+ Agregar recolección** | Agregar una parada manual a la ruta (no disponible si la ruta ya está finalizada) |
+**Operativo** — columnas principales: #, Estado, Zona, Dirección, Horario prog., Nombre, Hora real, **Unidad**, **Tipo de servicio** (en UI puede figurar como tipo de cliente), Precio total, montos, observaciones, firma, **Editar**.
+
+**Historial** — misma información ampliada; en Operativo podés **Editar**, **Agregar** o **Eliminar** (si la ruta lo permite).
+
+| Acción (Operativo) | Qué hace |
+|--------------------|----------|
+| **Editar** | Modificar datos de la parada (dirección, hora, precio, unidad, tipo de servicio, etc.) |
+| **+ Agregar recolección** | Agregar una parada manual (no si la ruta está Realizada o Cerrada) |
 | **Eliminar** | Quitar una parada |
+
+Los campos **Unidad** y **Tipo de servicio** vienen de la planilla o del alta manual; definen, entre otras cosas, **cómo se calcula el cobro** en campo (ver § 5.5).
 
 ### 3.6 Cierre operario
 
@@ -224,12 +240,28 @@ Usá **Suspender** cuando una ruta no debe ejecutarse temporalmente (clima, veh�
 
 Menú **Parámetros** (arriba) → `/panel/parametros`
 
-Desde acá configurás el **precio de bolsa extra**, que usa el recolector al calcular cuánto cobrar en cada parada.
+Desde acá configurás precios globales con historial de vigencia. Cada parámetro tiene su propia sección:
 
-- Las **2 primeras bolsas llenas** están incluidas en el precio de retiro de la planilla
-- A partir de la **3.ª bolsa llena**, se suma el precio de bolsa extra por cada una adicional
-- Solo podés **agregar un precio nuevo** (no editar los anteriores); queda historial con fecha de vigencia
-- El precio vigente se aplica automáticamente en la app del recolector
+| Parámetro | Uso actual |
+|-----------|------------|
+| **Precio de bolsa extra** | Cobro en campo (regla estándar): a partir de la **3.ª bolsa llena** se suma por cada bolsa adicional |
+| **Retiro reciclable mixto** | Cobro en campo **Mixto**: un solo precio que **incluye hasta 2 bolsas llenas** (1 o 2 → mismo total); desde la **3.ª**, bolsa extra |
+| **Precio bolsa punto** | Precio global configurable (pendiente de uso en cobro automático) |
+| **Precio bolsa llena punto** | Precio global configurable (pendiente de uso en cobro automático) |
+
+**Reglas de cobro en campo** (recolector), según datos de la parada:
+
+| Unidad / tipo | Cómo se calcula el total |
+|---------------|---------------------------|
+| **Empresa** (`unidad`) | Siempre el **precio de retiro** de la planilla; las bolsas llenas no cambian el monto |
+| **Mixto** (`tipo de servicio`) | **0 bolsas:** retiro de planilla · **1 o 2 bolsas:** precio **Retiro reciclable mixto** (mismo total con 1 o 2) · **3+:** ese precio + **bolsa extra** por cada bolsa desde la 3.ª |
+| **Resto** (Hogar, Puntos, etc.) | Retiro de planilla; las **2 primeras** bolsas llenas incluidas; desde la **3.ª**, **bolsa extra** por bolsa |
+
+En **todos** los parámetros de precio:
+
+- Solo podés **agregar un precio nuevo** (no editar los anteriores)
+- El anterior se cierra automáticamente al registrar uno nuevo
+- Queda **historial** con fechas de vigencia y quién lo registró
 
 ### 3.10 Gestión de usuarios
 
@@ -262,7 +294,7 @@ Estas tareas las hace normalmente el superadmin o alguien técnico al inicio:
 | Configurar planilla Google Sheets | Ver sección 6 |
 | Configurar mapas de Google | Documentación técnica interna |
 | Crear operarios y recolectores | Usuarios en la app |
-| Definir precio de bolsa extra | Parámetros en la app |
+| Definir precios del sistema | Parámetros en la app (bolsa extra, mixto, bolsa punto, etc.) |
 
 ---
 
@@ -281,7 +313,7 @@ El operario usa el **mismo panel operativo** que el superadmin para seguir rutas
 7. Rutas **Realizadas** → **Cierre operario** cuando corresponda
 8. Si hace falta pausar o reabrir → **Suspender** / **Reactivar** en Operativo
 9. Consultá **Historial** o **KPIs** para reportes; exportá CSV si necesitás Excel
-10. Revisá **Parámetros** cuando cambie el precio de bolsa extra
+10. Revisá **Parámetros** cuando cambien precios (bolsa extra, retiro mixto, etc.)
 
 ### 4.2 Historial y KPIs
 
@@ -299,7 +331,7 @@ Mismo flujo que superadmin (sección 3.8): botón **Suspender** en la tabla o en
 
 ### 4.5 Parámetros de precio
 
-Menú **Parámetros** → agregar nuevo **precio de bolsa extra** cuando el valor cambie. El historial queda registrado con fechas de vigencia.
+Menú **Parámetros** → cuatro bloques independientes (cada uno con precio vigente, formulario de alta e historial). Actualizá cuando cambien valores de negocio; el recolector usa automáticamente los vigentes en el cobro (bolsa extra y retiro mixto).
 
 ### 4.6 Editar una ruta
 
@@ -401,6 +433,7 @@ Con la ruta **iniciada**, tocá una parada de la lista → **Cargar en campo**.
 
 - Dirección del cliente
 - Cliente (nombre)
+- Unidad y tipo de servicio (si están cargados; definen la regla de cobro)
 - Hora programada
 - Observaciones
 
@@ -424,10 +457,10 @@ No hace falta completar bolsas ni pagos.
    - Biotachos llenos
    - Bolsas nuevas
    - Biotachos nuevos
-2. Revisá el **Precio de retiro** y el **Precio total a cobrar**:
-   - El retiro viene de la planilla (precio base del servicio)
-   - Si cargás **más de 2 bolsas llenas**, se suma el **precio de bolsa extra** por cada bolsa adicional (el valor lo define el operario en Parámetros)
-   - El desglose se actualiza al cambiar la cantidad de bolsas llenas
+2. Revisá el **Precio total a cobrar** (el desglose cambia según unidad y tipo de servicio):
+   - **Hogar / Puntos (estándar):** precio de retiro de la planilla; desde la **3.ª** bolsa llena, bolsa extra (Parámetros)
+   - **Empresa:** siempre el precio de retiro de la planilla, sin importar bolsas llenas
+   - **Mixto:** con 0 bolsas, precio de retiro de la planilla; con **1 o 2** bolsas, **Retiro reciclable mixto** (mismo monto); desde la **3.ª**, se suma bolsa extra
 3. Completá los **tres montos** (todos obligatorios; efectivo, transferencia y QR pueden ser **0**):
    - Monto efectivo
    - Monto transferencia
@@ -585,6 +618,12 @@ Documentación técnica de la integración: [SHEETS_INTEGRATION.md](./SHEETS_INT
 - Verificá el **rango de fechas** (KPIs) o que haya rutas en Historial
 - KPIs filtra por **fecha de la ruta**, no por fecha de carga de cada parada
 
+### El total a cobrar no coincide con lo que esperaba (recolector / operario)
+
+- Revisá **Unidad** (Empresa = precio fijo de planilla) y **Tipo de servicio** (Mixto = regla especial)
+- Verificá que en **Parámetros** estén cargados los precios vigentes (bolsa extra, retiro reciclable mixto)
+- Con **1 o 2 bolsas** en Mixto el total es el mismo; con **3+** se suma bolsa extra
+
 ### “Inicio de ruta” no guarda / error de columnas
 
 - Avisá al equipo técnico: puede faltar actualizar la base de datos (migraciones)
@@ -630,11 +669,15 @@ Documentación técnica de la integración: [SHEETS_INTEGRATION.md](./SHEETS_INT
 | **Cierre del recolector** | Datos que el recolector completa al finalizar |
 | **Ruta suspendida** | Pausada por el operario; el recolector no puede operarla |
 | **KPIs** | Indicadores agregados por período (staff) |
-| **Bolsa extra** | Cobro adicional por cada bolsa llena por encima de las 2 incluidas en el retiro |
+| **Unidad** | Hogar, Empresa o Puntos (planilla); en Empresa el cobro no varía por bolsas llenas |
+| **Tipo de servicio** | Reciclaje, Mixto u Orgánico; Mixto usa precio de Retiro reciclable mixto |
+| **Bolsa extra** | Precio en Parámetros; desde la 3.ª bolsa llena (regla estándar o Mixto con 3+) |
+| **Retiro reciclable mixto** | Precio en Parámetros; base del cobro Mixto con 1–2 bolsas llenas |
+| **Bolsa punto / bolsa llena punto** | Precios en Parámetros (configurables; uso en app según se habilite) |
 | **Carga en campo** | Datos que el recolector carga en cada parada |
 | **Operario** | Persona de backoffice que supervisa y edita rutas |
 | **Superadmin** | Administrador principal con acceso total |
 
 ---
 
-*Manual actualizado a junio 2026 (Historial, KPIs, cierre operario / estado Cerrada, exportación CSV, tablas ampliadas, filtros de fechas). Para detalles técnicos, ver [GUIA_DESARROLLADORES.md](./GUIA_DESARROLLADORES.md).*
+*Manual actualizado a junio 2026. Para detalles técnicos, ver [GUIA_DESARROLLADORES.md](./GUIA_DESARROLLADORES.md).*

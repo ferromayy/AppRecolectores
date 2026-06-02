@@ -37,7 +37,7 @@ export function OperarioRecoleccionesTable({
 
   return (
     <div className="overflow-x-auto rounded-xl border border-zinc-200 bg-white dark:border-zinc-800 dark:bg-zinc-900">
-      <table className="min-w-[1100px] w-full text-left text-sm">
+      <table className="min-w-[1280px] w-full text-left text-sm">
         <thead className="border-b border-zinc-200 bg-zinc-50 text-xs uppercase tracking-wide text-zinc-600 dark:border-zinc-800 dark:bg-zinc-950 dark:text-zinc-400">
           <tr>
             <th className="px-3 py-3 font-medium">#</th>
@@ -47,6 +47,8 @@ export function OperarioRecoleccionesTable({
             <th className="px-3 py-3 font-medium">Horario prog.</th>
             <th className="px-3 py-3 font-medium">Nombre</th>
             <th className="px-3 py-3 font-medium">Hora real</th>
+            <th className="px-3 py-3 font-medium">Unidad</th>
+            <th className="px-3 py-3 font-medium">Tipo de cliente</th>
             <th className="px-3 py-3 font-medium text-right">Precio total</th>
             <th className="px-3 py-3 font-medium text-right">Efectivo</th>
             <th className="px-3 py-3 font-medium text-right">Transferencia</th>
@@ -83,6 +85,18 @@ export function OperarioRecoleccionesTable({
                 <span suppressHydrationWarning>
                   {formatHoraReal(item.hora_real)}
                 </span>
+              </td>
+              <td
+                className="max-w-[100px] truncate px-3 py-2.5 text-zinc-600 dark:text-zinc-400"
+                title={item.unidad ?? undefined}
+              >
+                {item.unidad?.trim() || "—"}
+              </td>
+              <td
+                className="max-w-[120px] truncate px-3 py-2.5 text-zinc-600 dark:text-zinc-400"
+                title={item.tipo_servicio ?? undefined}
+              >
+                {item.tipo_servicio?.trim() || "—"}
               </td>
               <td className="whitespace-nowrap px-3 py-2.5 text-right">
                 {formatMoney(item.precio_total ?? (item.precio_tarifa ? Number(item.precio_tarifa) || null : null))}

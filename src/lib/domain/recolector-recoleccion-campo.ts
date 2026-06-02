@@ -1,4 +1,7 @@
-import { calcPrecioTotalCobrar } from "@/lib/domain/sistema-parametros";
+import {
+  calcPrecioTotalCobrarConReglas,
+  type PrecioCobroInput,
+} from "@/lib/domain/sistema-parametros";
 import type { RecoleccionOperativaEstado, RutaEstado } from "@/types/database";
 
 /** Estados en los que la recolección ya fue cargada por el recolector. */
@@ -66,8 +69,7 @@ export type RecoleccionCampoPayload = {
 
 export function parseRecoleccionCampoBody(
   body: Record<string, unknown>,
-  precioRetiro: number,
-  precioBolsaExtra = 0,
+  precios: Omit<PrecioCobroInput, "bolsasLlenas">,
 ): { ok: true; data: RecoleccionCampoPayload } | { ok: false; error: string } {
   const motivo_cancelacion = str(body.motivo_cancelacion) || null;
   const nombre_firmante = str(body.nombre_firmante);
@@ -92,7 +94,7 @@ export function parseRecoleccionCampoBody(
         biotachos_llenos: null,
         bolsas_nuevas: null,
         biotachos_nuevos: null,
-        precio_total: precioRetiro,
+        precio_total: precios.precioRetiro,
         monto_efectivo: null,
         monto_transferencia: null,
         monto_qr: null,
@@ -120,7 +122,10 @@ export function parseRecoleccionCampoBody(
     };
   }
 
-  const precio_total = calcPrecioTotalCobrar(precioRetiro, precioBolsaExtra, bolsas_llenas);
+  const precio_total = calcPrecioTotalCobrarConReglas({
+    ...precios,
+    bolsasLlenas: bolsas_llenas,
+  });
   const monto_efectivo = parseRequiredPayment(body.monto_efectivo);
   const monto_transferencia = parseRequiredPayment(body.monto_transferencia);
   const monto_qr = parseRequiredPayment(body.monto_qr);

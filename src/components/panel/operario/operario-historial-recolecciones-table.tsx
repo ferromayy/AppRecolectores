@@ -104,7 +104,7 @@ export function OperarioHistorialRecoleccionesTable({ recolecciones, ruta }: Pro
   return (
     <>
       <div className="overflow-x-auto rounded-xl border border-zinc-200 bg-white dark:border-zinc-800 dark:bg-zinc-900">
-        <table className="min-w-[2200px] w-full text-left text-sm">
+        <table className="min-w-[2360px] w-full text-left text-sm">
           <thead className="border-b border-zinc-200 bg-zinc-50 text-xs uppercase tracking-wide text-zinc-600 dark:border-zinc-800 dark:bg-zinc-950 dark:text-zinc-400">
             <tr>
               <th className={TH}>Horario</th>
@@ -112,6 +112,8 @@ export function OperarioHistorialRecoleccionesTable({ recolecciones, ruta }: Pro
               <th className={TH}>Nombre cliente</th>
               <th className={TH}>Horario programado</th>
               <th className={TH}>Hora real</th>
+              <th className={TH}>Unidad</th>
+              <th className={TH}>Tipo de cliente</th>
               <th className={TH}>Zona</th>
               <th className={`${TH} text-center`}>Cant. biotachos</th>
               <th className={`${TH} text-center`}>Cant. bolsas</th>
@@ -157,6 +159,8 @@ export function OperarioHistorialRecoleccionesTable({ recolecciones, ruta }: Pro
                   <td className={TD}>
                     <span suppressHydrationWarning>{formatHoraReal(item.hora_real)}</span>
                   </td>
+                  <TextCell value={item.unidad} maxWidth="100px" />
+                  <TextCell value={item.tipo_servicio} maxWidth="120px" />
                   <td className={TD}>
                     <button
                       type="button"

@@ -1,5 +1,108 @@
 export const PRECIO_BOLSA_EXTRA_CLAVE = "bolsa_extra" as const;
+export const PRECIO_RETIRO_RECICLABLE_MIXTO_CLAVE = "retiro_reciclable_mixto" as const;
+export const PRECIO_BOLSA_PUNTO_CLAVE = "bolsa_punto" as const;
+export const PRECIO_BOLSA_LLENA_PUNTO_CLAVE = "bolsa_llena_punto" as const;
+
+export const PRECIO_PARAMETRO_CLAVES = [
+  PRECIO_BOLSA_EXTRA_CLAVE,
+  PRECIO_RETIRO_RECICLABLE_MIXTO_CLAVE,
+  PRECIO_BOLSA_PUNTO_CLAVE,
+  PRECIO_BOLSA_LLENA_PUNTO_CLAVE,
+] as const;
+
+export type PrecioParametroClave = (typeof PRECIO_PARAMETRO_CLAVES)[number];
+
+export const PARAMETRO_PRECIO_SLUGS = {
+  "bolsa-extra": PRECIO_BOLSA_EXTRA_CLAVE,
+  "retiro-reciclable-mixto": PRECIO_RETIRO_RECICLABLE_MIXTO_CLAVE,
+  "bolsa-punto": PRECIO_BOLSA_PUNTO_CLAVE,
+  "bolsa-llena-punto": PRECIO_BOLSA_LLENA_PUNTO_CLAVE,
+} as const;
+
+export type ParametroPrecioSlug = keyof typeof PARAMETRO_PRECIO_SLUGS;
+
+/** Orden de visualización en /panel/parametros */
+export const PARAMETRO_PRECIO_ORDEN: ParametroPrecioSlug[] = [
+  "bolsa-extra",
+  "retiro-reciclable-mixto",
+  "bolsa-punto",
+  "bolsa-llena-punto",
+];
+
+export const PARAMETRO_PRECIO_UI: Record<
+  ParametroPrecioSlug,
+  { titulo: string; descripcion: string; inputLabel: string }
+> = {
+  "bolsa-extra": {
+    titulo: "Precio de bolsa extra",
+    descripcion:
+      "Se suma por cada bolsa llena a partir de la 3.ª en el cobro en campo. Solo podés agregar un nuevo precio; el anterior se cierra automáticamente.",
+    inputLabel: "Nuevo precio de bolsa extra *",
+  },
+  "retiro-reciclable-mixto": {
+    titulo: "Retiro reciclable mixto",
+    descripcion:
+      "Cobro en campo para tipo de servicio Mixto (incluye hasta 2 bolsas llenas). Solo podés agregar un nuevo precio; el anterior se cierra automáticamente.",
+    inputLabel: "Nuevo precio de retiro reciclable mixto *",
+  },
+  "bolsa-punto": {
+    titulo: "Precio bolsa punto",
+    descripcion:
+      "Precio de bolsa punto configurable. Solo podés agregar un nuevo precio; el anterior se cierra automáticamente.",
+    inputLabel: "Nuevo precio bolsa punto *",
+  },
+  "bolsa-llena-punto": {
+    titulo: "Precio bolsa llena punto",
+    descripcion:
+      "Precio de bolsa llena punto configurable. Solo podés agregar un nuevo precio; el anterior se cierra automáticamente.",
+    inputLabel: "Nuevo precio bolsa llena punto *",
+  },
+};
+
+export function resolveParametroPrecioClave(slug: string): PrecioParametroClave | null {
+  if (slug in PARAMETRO_PRECIO_SLUGS) {
+    return PARAMETRO_PRECIO_SLUGS[slug as ParametroPrecioSlug];
+  }
+  return null;
+}
+
 export const BOLSAS_LLENAS_INCLUIDAS = 2;
+
+export type PrecioCobroRegla = "estandar" | "empresa" | "mixto";
+
+export type PrecioCobroInput = {
+  unidad: string | null;
+  tipoServicio: string | null;
+  precioRetiro: number;
+  precioBolsaExtra: number;
+  precioRetiroReciclableMixto: number;
+  bolsasLlenas: number;
+};
+
+export function normalizeUnidad(unidad: string | null | undefined): string {
+  return (unidad ?? "").trim();
+}
+
+export function normalizeTipoServicio(tipoServicio: string | null | undefined): string {
+  return (tipoServicio ?? "").trim();
+}
+
+export function isUnidadEmpresa(unidad: string | null | undefined): boolean {
+  return normalizeUnidad(unidad).toLowerCase() === "empresa";
+}
+
+export function isTipoServicioMixto(tipoServicio: string | null | undefined): boolean {
+  return normalizeTipoServicio(tipoServicio).toLowerCase() === "mixto";
+}
+
+export function resolvePrecioCobroRegla(
+  unidad: string | null | undefined,
+  tipoServicio: string | null | undefined,
+): PrecioCobroRegla {
+  if (isUnidadEmpresa(unidad)) return "empresa";
+  if (isTipoServicioMixto(tipoServicio)) return "mixto";
+  return "estandar";
+}
 
 export function calcBolsasExtraCount(bolsasLlenas: number): number {
   if (!Number.isFinite(bolsasLlenas) || bolsasLlenas <= BOLSAS_LLENAS_INCLUIDAS) {
@@ -15,52 +118,171 @@ export function calcPrecioBolsaExtraTotal(
   return precioBolsaExtra * calcBolsasExtraCount(bolsasLlenas);
 }
 
+/** @deprecated Usar calcPrecioTotalCobrarConReglas */
 export function calcPrecioTotalCobrar(
   precioRetiro: number,
   precioBolsaExtra: number,
   bolsasLlenas: number,
 ): number {
-  return precioRetiro + calcPrecioBolsaExtraTotal(precioBolsaExtra, bolsasLlenas);
+  return calcPrecioTotalCobrarConReglas({
+    unidad: null,
+    tipoServicio: null,
+    precioRetiro,
+    precioBolsaExtra,
+    precioRetiroReciclableMixto: 0,
+    bolsasLlenas,
+  });
+}
+
+export function calcPrecioTotalCobrarConReglas(input: PrecioCobroInput): number {
+  const bolsas = sanitizeBolsasLlenas(input.bolsasLlenas);
+  const regla = resolvePrecioCobroRegla(input.unidad, input.tipoServicio);
+
+  if (regla === "empresa") {
+    return input.precioRetiro;
+  }
+
+  if (regla === "mixto") {
+    if (bolsas === 0) {
+      return input.precioRetiro;
+    }
+    return (
+      input.precioRetiroReciclableMixto +
+      calcPrecioBolsaExtraTotal(input.precioBolsaExtra, bolsas)
+    );
+  }
+
+  return input.precioRetiro + calcPrecioBolsaExtraTotal(input.precioBolsaExtra, bolsas);
 }
 
 export type PrecioCobroDetalle = {
+  regla: PrecioCobroRegla;
   precioRetiro: number;
   precioBolsaExtra: number;
+  precioRetiroReciclableMixto: number;
   bolsasLlenas: number;
+  bolsasConTarifaMixto: number;
   bolsasExtra: number;
+  montoRetiroMixto: number;
   montoBolsaExtra: number;
   precioTotal: number;
   precioRetiroLabel: string;
   precioBolsaExtraLabel: string;
+  precioRetiroReciclableMixtoLabel: string;
+  montoRetiroMixtoLabel: string;
   montoBolsaExtraLabel: string;
   precioTotalLabel: string;
   bolsaExtraDetalleLabel: string | null;
+  retiroMixtoDetalleLabel: string | null;
+  ayudaCobro: string;
 };
 
-export function buildPrecioCobroDetalle(
-  precioRetiro: number,
-  precioBolsaExtra: number,
-  bolsasLlenas: number,
-): PrecioCobroDetalle {
+function sanitizeBolsasLlenas(bolsasLlenas: number): number {
+  if (!Number.isFinite(bolsasLlenas) || bolsasLlenas < 0) return 0;
+  return Math.floor(bolsasLlenas);
+}
+
+export function buildPrecioCobroDetalle(input: PrecioCobroInput): PrecioCobroDetalle {
+  const bolsasLlenas = sanitizeBolsasLlenas(input.bolsasLlenas);
+  const regla = resolvePrecioCobroRegla(input.unidad, input.tipoServicio);
+  const precioRetiroLabel = formatParametroMoney(input.precioRetiro);
+  const precioBolsaExtraLabel = formatParametroMoney(input.precioBolsaExtra);
+  const precioRetiroReciclableMixtoLabel = formatParametroMoney(
+    input.precioRetiroReciclableMixto,
+  );
+
+  if (regla === "empresa") {
+    return {
+      regla,
+      precioRetiro: input.precioRetiro,
+      precioBolsaExtra: input.precioBolsaExtra,
+      precioRetiroReciclableMixto: input.precioRetiroReciclableMixto,
+      bolsasLlenas,
+      bolsasConTarifaMixto: 0,
+      bolsasExtra: 0,
+      montoRetiroMixto: 0,
+      montoBolsaExtra: 0,
+      precioTotal: input.precioRetiro,
+      precioRetiroLabel,
+      precioBolsaExtraLabel,
+      precioRetiroReciclableMixtoLabel,
+      montoRetiroMixtoLabel: formatParametroMoney(0),
+      montoBolsaExtraLabel: formatParametroMoney(0),
+      precioTotalLabel: precioRetiroLabel,
+      bolsaExtraDetalleLabel: null,
+      retiroMixtoDetalleLabel: null,
+      ayudaCobro:
+        "Empresa: el total es el precio de retiro de la planilla; no cambia por la cantidad de bolsas llenas.",
+    };
+  }
+
+  if (regla === "mixto") {
+    const bolsasExtra = bolsasLlenas > 0 ? calcBolsasExtraCount(bolsasLlenas) : 0;
+    const montoRetiroMixto = bolsasLlenas > 0 ? input.precioRetiroReciclableMixto : 0;
+    const montoBolsaExtra = calcPrecioBolsaExtraTotal(input.precioBolsaExtra, bolsasLlenas);
+    const precioTotal =
+      bolsasLlenas === 0 ? input.precioRetiro : montoRetiroMixto + montoBolsaExtra;
+
+    return {
+      regla,
+      precioRetiro: input.precioRetiro,
+      precioBolsaExtra: input.precioBolsaExtra,
+      precioRetiroReciclableMixto: input.precioRetiroReciclableMixto,
+      bolsasLlenas,
+      bolsasConTarifaMixto: bolsasLlenas > 0 && bolsasLlenas <= BOLSAS_LLENAS_INCLUIDAS ? 1 : 0,
+      bolsasExtra,
+      montoRetiroMixto,
+      montoBolsaExtra,
+      precioTotal,
+      precioRetiroLabel,
+      precioBolsaExtraLabel,
+      precioRetiroReciclableMixtoLabel,
+      montoRetiroMixtoLabel: formatParametroMoney(montoRetiroMixto),
+      montoBolsaExtraLabel: formatParametroMoney(montoBolsaExtra),
+      precioTotalLabel: formatParametroMoney(precioTotal),
+      retiroMixtoDetalleLabel:
+        bolsasLlenas > 0
+          ? `Incluye 1.ª y 2.ª bolsa llena (${precioRetiroReciclableMixtoLabel})`
+          : null,
+      bolsaExtraDetalleLabel:
+        bolsasExtra > 0
+          ? `${bolsasExtra} bolsa(s) extra × ${precioBolsaExtraLabel}`
+          : null,
+      ayudaCobro:
+        bolsasLlenas === 0
+          ? "Mixto sin bolsas llenas: se usa el precio de retiro de la planilla."
+          : "Mixto: Retiro reciclable mixto incluye hasta 2 bolsas llenas (mismo total con 1 o 2). Desde la 3.ª, bolsa extra.",
+    };
+  }
+
   const bolsasExtra = calcBolsasExtraCount(bolsasLlenas);
-  const montoBolsaExtra = calcPrecioBolsaExtraTotal(precioBolsaExtra, bolsasLlenas);
-  const precioTotal = calcPrecioTotalCobrar(precioRetiro, precioBolsaExtra, bolsasLlenas);
+  const montoBolsaExtra = calcPrecioBolsaExtraTotal(input.precioBolsaExtra, bolsasLlenas);
+  const precioTotal = input.precioRetiro + montoBolsaExtra;
 
   return {
-    precioRetiro,
-    precioBolsaExtra,
+    regla: "estandar",
+    precioRetiro: input.precioRetiro,
+    precioBolsaExtra: input.precioBolsaExtra,
+    precioRetiroReciclableMixto: input.precioRetiroReciclableMixto,
     bolsasLlenas,
+    bolsasConTarifaMixto: 0,
     bolsasExtra,
+    montoRetiroMixto: 0,
     montoBolsaExtra,
     precioTotal,
-    precioRetiroLabel: formatParametroMoney(precioRetiro),
-    precioBolsaExtraLabel: formatParametroMoney(precioBolsaExtra),
+    precioRetiroLabel,
+    precioBolsaExtraLabel,
+    precioRetiroReciclableMixtoLabel,
+    montoRetiroMixtoLabel: formatParametroMoney(0),
     montoBolsaExtraLabel: formatParametroMoney(montoBolsaExtra),
     precioTotalLabel: formatParametroMoney(precioTotal),
     bolsaExtraDetalleLabel:
       bolsasExtra > 0
-        ? `${bolsasExtra} bolsa(s) extra × ${formatParametroMoney(precioBolsaExtra)}`
+        ? `${bolsasExtra} bolsa(s) extra × ${precioBolsaExtraLabel}`
         : null,
+    retiroMixtoDetalleLabel: null,
+    ayudaCobro:
+      "Las 2 primeras bolsas llenas están incluidas en el precio de retiro. Desde la 3.ª se suma bolsa extra.",
   };
 }
 

@@ -1,10 +1,22 @@
 import { redirect } from "next/navigation";
 
 import { OperarioParametrosSistema } from "@/components/panel/operario/operario-parametros-sistema";
-import { fetchPrecioBolsaExtraHistorial } from "@/lib/data/sistema-parametros";
+import { fetchPrecioHistorialByClave } from "@/lib/data/sistema-parametros";
 import { requireAuth } from "@/lib/auth/session";
+import {
+  PARAMETRO_PRECIO_ORDEN,
+  PARAMETRO_PRECIO_SLUGS,
+  type ParametroPrecioSlug,
+} from "@/lib/domain/sistema-parametros";
 import { isStaffRole } from "@/lib/domain/constants";
 import { isSupabaseAdminConfigured } from "@/lib/env";
+
+function toParametroData(items: Awaited<ReturnType<typeof fetchPrecioHistorialByClave>>) {
+  return {
+    historial: items.items,
+    precioActivo: items.items.find((item) => item.activo) ?? null,
+  };
+}
 
 export default async function ParametrosSistemaPage() {
   const auth = await requireAuth();
@@ -24,8 +36,17 @@ export default async function ParametrosSistemaPage() {
     );
   }
 
-  const { items, error } = await fetchPrecioBolsaExtraHistorial();
-  const precioActivo = items.find((item) => item.activo) ?? null;
+  const results = await Promise.all(
+    PARAMETRO_PRECIO_ORDEN.map((slug) =>
+      fetchPrecioHistorialByClave(PARAMETRO_PRECIO_SLUGS[slug]),
+    ),
+  );
+
+  const error = results.find((r) => r.error)?.error ?? null;
+
+  const parametros = Object.fromEntries(
+    PARAMETRO_PRECIO_ORDEN.map((slug, index) => [slug, toParametroData(results[index])]),
+  ) as Record<ParametroPrecioSlug, ReturnType<typeof toParametroData>>;
 
   return (
     <div className="space-y-4">
@@ -35,7 +56,7 @@ export default async function ParametrosSistemaPage() {
           <code className="text-xs">20260525120000_sistema_parametros_precio.sql</code>?
         </p>
       )}
-      <OperarioParametrosSistema historial={items} precioActivo={precioActivo} />
+      <OperarioParametrosSistema parametros={parametros} />
     </div>
   );
 }

@@ -1,7 +1,10 @@
 import { NextResponse } from "next/server";
 
 import { requireAuth } from "@/lib/auth/session";
-import { fetchPrecioBolsaExtraActivo } from "@/lib/data/sistema-parametros";
+import {
+  fetchPrecioBolsaExtraActivo,
+  fetchPrecioRetiroReciclableMixtoActivo,
+} from "@/lib/data/sistema-parametros";
 import {
   parsePrecioRetiro,
   parseRecoleccionCampoBody,
@@ -103,8 +106,17 @@ export async function PATCH(request: Request, { params }: Props) {
   }
 
   const precioRetiro = parsePrecioRetiro(recoleccion.precio);
-  const precioBolsaExtra = await fetchPrecioBolsaExtraActivo();
-  const parsed = parseRecoleccionCampoBody(body, precioRetiro, precioBolsaExtra);
+  const [precioBolsaExtra, precioRetiroReciclableMixto] = await Promise.all([
+    fetchPrecioBolsaExtraActivo(),
+    fetchPrecioRetiroReciclableMixtoActivo(),
+  ]);
+  const parsed = parseRecoleccionCampoBody(body, {
+    unidad: recoleccion.unidad,
+    tipoServicio: recoleccion.tipo_servicio,
+    precioRetiro,
+    precioBolsaExtra,
+    precioRetiroReciclableMixto,
+  });
   if (!parsed.ok) {
     return NextResponse.json({ ok: false, error: parsed.error }, { status: 400 });
   }
