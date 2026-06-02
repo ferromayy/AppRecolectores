@@ -86,7 +86,8 @@ export default async function PanelHomePage() {
   }
 
   if (staff && isSupabaseAdminConfigured()) {
-    const { rutas, recolecciones, recolectores, error } = await fetchOperarioDashboardData();
+    const { rutas, recolecciones, recolectores, error } =
+      await fetchOperarioDashboardData("operativo");
     const operarioNombre = profile?.full_name || profile?.email || user?.email || "Operario";
 
     return (

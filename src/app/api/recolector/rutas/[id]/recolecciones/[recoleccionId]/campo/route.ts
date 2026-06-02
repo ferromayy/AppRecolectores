@@ -2,7 +2,11 @@ import { NextResponse } from "next/server";
 
 import { requireAuth } from "@/lib/auth/session";
 import { fetchPrecioBolsaExtraActivo } from "@/lib/data/sistema-parametros";
-import { parsePrecioRetiro, parseRecoleccionCampoBody } from "@/lib/domain/recolector-recoleccion-campo";
+import {
+  parsePrecioRetiro,
+  parseRecoleccionCampoBody,
+  recoleccionCerradaParaRecolector,
+} from "@/lib/domain/recolector-recoleccion-campo";
 import { getInicioJornadaAt } from "@/lib/domain/recolector-ruta";
 import { createAdminClient } from "@/lib/supabase/admin";
 import type { Database } from "@/types/database";
@@ -59,7 +63,7 @@ export async function PATCH(request: Request, { params }: Props) {
     );
   }
 
-  if (ruta.estado === "completada" || ruta.estado === "cancelada") {
+  if (ruta.estado === "completada" || ruta.estado === "cerrada" || ruta.estado === "cancelada") {
     return NextResponse.json(
       { ok: false, error: "No se puede cargar una ruta finalizada o cancelada" },
       { status: 400 },
@@ -89,6 +93,13 @@ export async function PATCH(request: Request, { params }: Props) {
 
   if (!recoleccion) {
     return NextResponse.json({ ok: false, error: "Recolección no encontrada" }, { status: 404 });
+  }
+
+  if (recoleccionCerradaParaRecolector(recoleccion.estado_operativo)) {
+    return NextResponse.json(
+      { ok: false, error: "Esta recolección ya fue guardada y no se puede modificar" },
+      { status: 400 },
+    );
   }
 
   const precioRetiro = parsePrecioRetiro(recoleccion.precio);

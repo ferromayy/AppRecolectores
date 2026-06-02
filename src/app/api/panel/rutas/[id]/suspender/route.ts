@@ -3,6 +3,7 @@ import { NextResponse } from "next/server";
 import { requireStaff } from "@/lib/auth/session";
 import {
   estadoTrasReactivar,
+  limpiezaTrasReactivar,
   puedeReactivarRuta,
   puedeSuspenderRuta,
 } from "@/lib/domain/ruta-estado-transiciones";
@@ -12,18 +13,6 @@ import type { Database } from "@/types/database";
 type RutaUpdate = Database["public"]["Tables"]["rutas"]["Update"];
 
 type Props = { params: Promise<{ id: string }> };
-
-function getInicioJornadaAt(
-  ruta: Pick<Database["public"]["Tables"]["rutas"]["Row"], "inicio_jornada_at" | "metadata">,
-): string | null {
-  if (ruta.inicio_jornada_at) return ruta.inicio_jornada_at;
-  const metadata = ruta.metadata;
-  if (metadata && typeof metadata === "object" && !Array.isArray(metadata)) {
-    const value = metadata.inicio_jornada_at;
-    return typeof value === "string" ? value : null;
-  }
-  return null;
-}
 
 export async function POST(_request: Request, { params }: Props) {
   const auth = await requireStaff();
@@ -105,13 +94,19 @@ export async function DELETE(_request: Request, { params }: Props) {
 
   if (!puedeReactivarRuta(ruta.estado)) {
     return NextResponse.json(
-      { ok: false, error: "Solo se pueden reactivar rutas suspendidas" },
+      {
+        ok: false,
+        error: "Solo se pueden reactivar rutas realizadas (sin cierre operario) o suspendidas",
+      },
       { status: 400 },
     );
   }
 
-  const nuevoEstado = estadoTrasReactivar(getInicioJornadaAt(ruta) != null);
-  const updatePayload: RutaUpdate = { estado: nuevoEstado };
+  const nuevoEstado = estadoTrasReactivar();
+  const updatePayload: RutaUpdate = {
+    estado: nuevoEstado,
+    ...limpiezaTrasReactivar(ruta.estado),
+  };
 
   const { error: updateError } = await admin.from("rutas").update(updatePayload).eq("id", rutaId);
 

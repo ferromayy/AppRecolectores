@@ -21,7 +21,7 @@ function sortRutasByFechaDesc<T extends { fecha: string; created_at: string }>(a
 
 export function categoriaRutaRecolector(estado: RutaEstado): RecolectorRutaCategoria {
   if (estado === "suspendida") return "suspendidas";
-  if (estado === "completada" || estado === "cancelada") return "completadas";
+  if (estado === "completada" || estado === "cerrada" || estado === "cancelada") return "completadas";
   return "activas";
 }
 

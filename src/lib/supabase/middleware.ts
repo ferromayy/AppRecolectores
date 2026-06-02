@@ -78,7 +78,13 @@ export async function updateSession(request: NextRequest) {
 
   if (
     pathname === "/panel/rutas" ||
-    pathname.startsWith("/panel/rutas/")
+    pathname.startsWith("/panel/rutas/") ||
+    pathname === "/panel/historial" ||
+    pathname.startsWith("/panel/historial/") ||
+    pathname === "/panel/parametros" ||
+    pathname.startsWith("/panel/parametros/") ||
+    pathname === "/panel/kpis" ||
+    pathname.startsWith("/panel/kpis/")
   ) {
     const loginUrl = new URL("/login", request.url);
     loginUrl.searchParams.set("next", pathname);

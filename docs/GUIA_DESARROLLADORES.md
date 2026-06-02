@@ -212,6 +212,8 @@ Matriz resumida (`src/lib/auth/permissions.ts`):
 |------|-----|-------------|
 | `/login` | Público | Inicio de sesión |
 | `/panel` | Todos | Staff → dashboard operario. Recolector → home (Hoy / Última jornada) |
+| `/panel` | superadmin, admin | Rutas en operación (activas / en curso) |
+| `/panel/historial` | superadmin, admin | Rutas cerradas (cierre operario) o canceladas (solo consulta) |
 | `/panel/parametros` | superadmin, admin | Precio de bolsa extra (historial con vigencia) |
 | `/panel/usuarios` | superadmin, admin | Alta y gestión de usuarios |
 | `/panel/mis-rutas` | recolector | Rutas asignadas (Activas / Completadas / Suspendidas) |
@@ -248,7 +250,7 @@ Aliases que redirigen: `/panel/rutas`, `/panel/recolecciones`, `/admin/usuarios`
 | PATCH | `/api/panel/rutas/[id]` | Editar ruta |
 | DELETE | `/api/panel/rutas/[id]` | Eliminar ruta |
 | POST | `/api/panel/rutas/[id]/suspender` | Suspender ruta (`activa` / `en_curso` → `suspendida`) |
-| DELETE | `/api/panel/rutas/[id]/suspender` | Reactivar ruta suspendida (vuelve a `activa` o `en_curso`) |
+| DELETE | `/api/panel/rutas/[id]/suspender` | Reactivar ruta (desde Operativo; suspendida → `en_curso`) |
 | POST | `/api/panel/rutas/[id]/recolecciones` | Agregar parada (bloqueado si ruta `completada`) |
 | PATCH | `/api/panel/rutas/[id]/recolecciones/[recoleccionId]` | Editar parada |
 | DELETE | `/api/panel/rutas/[id]/recolecciones/[recoleccionId]` | Eliminar parada |
@@ -372,7 +374,7 @@ Body de cierre (`recolector-cierre-ruta.ts`):
 
 Validaciones de cierre:
 
-- `km_final` obligatorio; **≤ km_inicial**
+- `km_final` obligatorio; **≥ km_inicial**
 - `combustible`, `descuento`, `otros_gastos`: ≥ 0
 - Si **efectivo recaudado = 0**, no se permiten gastos
 - Gastos no pueden superar el efectivo recaudado

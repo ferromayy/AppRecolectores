@@ -51,7 +51,7 @@ export async function POST(request: Request, { params }: Props) {
     return NextResponse.json({ ok: false, error: "Ruta no encontrada" }, { status: 404 });
   }
 
-  if (ruta.estado === "completada") {
+  if (ruta.estado === "completada" || ruta.estado === "cerrada") {
     return NextResponse.json({ ok: false, error: "La ruta ya fue finalizada" }, { status: 409 });
   }
 

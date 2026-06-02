@@ -14,6 +14,7 @@ import {
   type RecolectorRecoleccionPreview,
   type RecolectorRutaDetalle,
 } from "@/lib/domain/recolector-ruta";
+import { recoleccionCerradaParaRecolector } from "@/lib/domain/recolector-recoleccion-campo";
 import { mensajeBloqueoSuspension } from "@/lib/domain/ruta-estado-transiciones";
 
 type Props = {
@@ -82,6 +83,12 @@ export function RecolectorRutaDetalle({
       >
         ← Volver a mis rutas
       </Link>
+
+      {ruta.rutaFinalizada && (
+        <p className="rounded-2xl border border-emerald-200 bg-emerald-50 p-4 text-sm text-emerald-900 dark:border-emerald-900 dark:bg-emerald-950/40 dark:text-emerald-200">
+          Ruta finalizada. Solo podés consultar recolecciones; no podés modificar datos.
+        </p>
+      )}
 
       {ruta.rutaSuspendida && (
         <p className="rounded-2xl border border-orange-200 bg-orange-50 p-4 text-sm text-orange-900 dark:border-orange-900 dark:bg-orange-950/40 dark:text-orange-200">
@@ -180,8 +187,16 @@ export function RecolectorRutaDetalle({
         ) : (
           <ol className="space-y-3">
             {recoleccionesPreview.map((item) => {
-              const completada = ["Visitada", "Cancelada"].includes(item.estadoLabel);
-              const puedeEditarCarga = ruta.rutaIniciada && !ruta.rutaFinalizada && !ruta.rutaSuspendida;
+              const recoleccionCerrada = recoleccionCerradaParaRecolector(item.estado);
+              const puedeIrACarga =
+                ruta.rutaIniciada &&
+                !ruta.rutaSuspendida &&
+                (ruta.rutaFinalizada || recoleccionCerrada || !recoleccionCerrada);
+              const labelCarga = ruta.rutaFinalizada
+                ? "Ver carga →"
+                : recoleccionCerrada
+                  ? "Ver carga →"
+                  : "Cargar en campo →";
               const cardContent = (
                 <>
                   <div className="flex gap-3">
@@ -201,7 +216,7 @@ export function RecolectorRutaDetalle({
                       <div className="mt-2 flex flex-wrap items-center gap-2">
                         <span
                           className={`rounded-full px-2 py-0.5 text-xs ${
-                            completada
+                            recoleccionCerrada
                               ? "bg-emerald-100 text-emerald-800 dark:bg-emerald-950 dark:text-emerald-300"
                               : "bg-zinc-100 text-zinc-700 dark:bg-zinc-800 dark:text-zinc-300"
                           }`}
@@ -213,22 +228,22 @@ export function RecolectorRutaDetalle({
                             {item.zona}
                           </span>
                         )}
-                        <span className="text-xs font-medium text-emerald-700 dark:text-emerald-400">
-                          {puedeEditarCarga
-                            ? completada
-                              ? "Editar carga →"
-                              : "Cargar en campo →"
-                            : ruta.rutaFinalizada
-                              ? "Ver carga →"
-                              : "Ver detalle →"}
-                        </span>
+                        {puedeIrACarga ? (
+                          <span className="text-xs font-medium text-emerald-700 dark:text-emerald-400">
+                            {labelCarga}
+                          </span>
+                        ) : (
+                          <span className="text-xs font-medium text-zinc-500">
+                            Ver detalle →
+                          </span>
+                        )}
                       </div>
                     </div>
                   </div>
                 </>
               );
 
-              if (puedeEditarCarga || (ruta.rutaFinalizada && completada)) {
+              if (puedeIrACarga) {
                 return (
                   <li key={item.id}>
                     <Link

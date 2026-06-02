@@ -20,6 +20,7 @@ const inputClass =
 
 export function RecolectorRecoleccionCampoForm({ data, rutaNombre }: Props) {
   const router = useRouter();
+  const soloLectura = data.soloLectura;
   const [motivoCancelacion, setMotivoCancelacion] = useState(data.motivoCancelacion);
   const [bolsasLlenas, setBolsasLlenas] = useState(data.bolsasLlenas);
   const [biotachosLlenos, setBiotachosLlenos] = useState(data.biotachosLlenos);
@@ -48,6 +49,7 @@ export function RecolectorRecoleccionCampoForm({ data, rutaNombre }: Props) {
 
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
+    if (soloLectura) return;
     setSaving(true);
     setError(null);
 
@@ -116,15 +118,25 @@ export function RecolectorRecoleccionCampoForm({ data, rutaNombre }: Props) {
           Recolección #{data.orden} · {rutaNombre}
         </p>
         <h1 className="mt-1 text-xl font-semibold text-zinc-900 dark:text-zinc-50">
-          Carga en campo
+          {soloLectura ? "Consulta de carga" : "Carga en campo"}
         </h1>
-        {data.completada && (
-          <p className="mt-2 text-sm text-amber-700 dark:text-amber-400">
-            Ya cargada ({data.estadoLabel}). Podés actualizar los datos.
+        {soloLectura && (
+          <p className="mt-2 rounded-xl border border-amber-200 bg-amber-50 p-3 text-sm text-amber-900 dark:border-amber-900 dark:bg-amber-950/40 dark:text-amber-200">
+            {data.completada
+              ? `Esta recolección ya fue guardada (${data.estadoLabel}). No podés modificar los datos.`
+              : "La ruta está finalizada. Solo podés consultar la información."}
           </p>
         )}
       </div>
 
+      {soloLectura ? (
+        <RecoleccionCampoSoloLectura
+          data={data}
+          esCancelacion={esCancelacion}
+          precioRetiroLabel={precioRetiroLabel}
+          cobroDetalle={cobroDetalle}
+        />
+      ) : (
       <form onSubmit={handleSubmit} className="space-y-4">
         {error && (
           <p className="rounded-xl bg-red-50 p-3 text-sm text-red-700 dark:bg-red-950 dark:text-red-300">
@@ -260,6 +272,92 @@ export function RecolectorRecoleccionCampoForm({ data, rutaNombre }: Props) {
           {saving ? "Guardando…" : esCancelacion ? "Guardar cancelación" : "Guardar recolección"}
         </button>
       </form>
+      )}
+    </div>
+  );
+}
+
+function RecoleccionCampoSoloLectura({
+  data,
+  esCancelacion,
+  precioRetiroLabel,
+  cobroDetalle,
+}: {
+  data: RecoleccionCampoFormData;
+  esCancelacion: boolean;
+  precioRetiroLabel: string;
+  cobroDetalle: ReturnType<typeof buildPrecioCobroDetalle>;
+}) {
+  return (
+    <div className="space-y-4">
+      <section className="rounded-2xl border border-zinc-200 bg-zinc-50 p-4 dark:border-zinc-800 dark:bg-zinc-900/60">
+        <h2 className="text-sm font-semibold text-zinc-900 dark:text-zinc-50">
+          Datos del cliente
+        </h2>
+        <dl className="mt-3 space-y-2 text-sm">
+          <ReadOnlyRow label="Dirección" value={data.direccion} />
+          <ReadOnlyRow label="Cliente" value={data.nombre} />
+          <ReadOnlyRow label="Hora programada" value={data.horaProgramada} />
+          <ReadOnlyRow label="Estado" value={data.estadoLabel} />
+          <ReadOnlyRow label="Observaciones" value={data.observaciones || "—"} />
+        </dl>
+      </section>
+
+      {esCancelacion ? (
+        <section className="rounded-2xl border border-zinc-200 bg-white p-4 dark:border-zinc-800 dark:bg-zinc-900">
+          <h2 className="mb-2 text-sm font-semibold text-zinc-900 dark:text-zinc-50">
+            Cancelación
+          </h2>
+          <ReadOnlyRow label="Motivo" value={data.motivoCancelacion || "—"} />
+        </section>
+      ) : (
+        <>
+          <section className="rounded-2xl border border-zinc-200 bg-white p-4 dark:border-zinc-800 dark:bg-zinc-900">
+            <h2 className="mb-3 text-sm font-semibold text-zinc-900 dark:text-zinc-50">
+              Retiro
+            </h2>
+            <dl className="space-y-2 text-sm">
+              <ReadOnlyRow label="Bolsas llenas" value={data.bolsasLlenas || "0"} />
+              <ReadOnlyRow label="Biotachos llenos" value={data.biotachosLlenos || "0"} />
+              <ReadOnlyRow label="Bolsas nuevas" value={data.bolsasNuevas || "0"} />
+              <ReadOnlyRow label="Biotachos nuevos" value={data.biotachosNuevos || "0"} />
+            </dl>
+          </section>
+
+          <section className="rounded-2xl border border-zinc-200 bg-white p-4 dark:border-zinc-800 dark:bg-zinc-900">
+            <h2 className="mb-3 text-sm font-semibold text-zinc-900 dark:text-zinc-50">
+              Cobro
+            </h2>
+            <dl className="space-y-2 text-sm">
+              <ReadOnlyRow label="Precio de retiro" value={precioRetiroLabel} />
+              {cobroDetalle.bolsasExtra > 0 && (
+                <>
+                  <ReadOnlyRow label="Bolsa extra" value={data.precioBolsaExtraLabel} />
+                  <ReadOnlyRow
+                    label="Cargo bolsa extra"
+                    value={`${cobroDetalle.bolsaExtraDetalleLabel} = ${cobroDetalle.montoBolsaExtraLabel}`}
+                  />
+                </>
+              )}
+              <ReadOnlyRow label="Precio total" value={cobroDetalle.precioTotalLabel} />
+              <ReadOnlyRow label="Efectivo" value={data.montoEfectivo} />
+              <ReadOnlyRow label="Transferencia" value={data.montoTransferencia} />
+              <ReadOnlyRow label="QR" value={data.montoQr} />
+            </dl>
+          </section>
+        </>
+      )}
+
+      <section className="rounded-2xl border border-zinc-200 bg-white p-4 dark:border-zinc-800 dark:bg-zinc-900">
+        <h2 className="mb-3 text-sm font-semibold text-zinc-900 dark:text-zinc-50">Firma</h2>
+        <dl className="space-y-2 text-sm">
+          <ReadOnlyRow label="Firmante" value={data.nombreFirmante || "—"} />
+          <ReadOnlyRow
+            label="Firma confirmada"
+            value={data.firmaConfirmada ? "Sí" : "No"}
+          />
+        </dl>
+      </section>
     </div>
   );
 }

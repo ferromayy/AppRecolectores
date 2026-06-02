@@ -66,11 +66,15 @@ El superadmin es la cuenta principal de administración (`somos@ecolink.com.ar`)
 
 ### 3.1 Panel operativo
 
-Al ingresar llegás a **Panel operativo** con dos secciones:
+Al ingresar llegás a **Operativo** (menú superior). Muestra rutas **activas** (pendientes o en proceso), **suspendidas** y **realizadas** (completadas por el recolector, pendientes de cierre operario). Desde acá podés suspender, reactivar suspendidas y aplicar **Cierre operario** a las realizadas.
 
-#### Tabla **Ruta**
+### 3.2 Historial
 
-Lista todas las rutas importadas o creadas. Cada fila muestra, entre otros datos:
+En el menú **Historial** ves rutas **cerradas** (tras cierre operario) o **canceladas**. Es una vista de **solo consulta**: podés ver recolecciones, insumos y totales, pero no editar ni reactivar.
+
+### 3.3 Tabla de rutas (Operativo e Historial)
+
+Lista las rutas del contexto actual (operativas o historial). Cada fila muestra, entre otros datos:
 
 - Fecha y turno (Mañana / Tarde)
 - Recolector asignado
@@ -85,11 +89,13 @@ Lista todas las rutas importadas o creadas. Cada fila muestra, entre otros datos
 | Seleccionar fila | Muestra sus recolecciones abajo |
 | **Ver detalle** | Resumen completo de la ruta (incluye **Suspender** o **Reactivar** según el estado) |
 | **Ver mapa** | Mapa con direcciones geocodificadas |
-| **Editar** | Cambiar nombre, fecha, turno, estado, recolector, observaciones |
-| **Suspender** | Pausa la ruta: el recolector no puede operarla hasta reactivarla |
+| **Editar** | Cambiar nombre, fecha, turno, estado, recolector, observaciones (solo en Operativo) |
+| **Suspender** | Pausa la ruta (solo en Operativo, rutas activas) |
+| **Reactivar** | Reabre una ruta **Realizado** (sin cierre operario) o **Suspendida** → **En proceso** (solo en Operativo) |
+| **Cierre operario** | Pasa una ruta **Realizado** a **Cerrada** y la mueve al Historial |
 | **Eliminar** | Borra la ruta y todas sus paradas (acción irreversible) |
 
-#### Tabla **Recolecciones**
+#### Tabla **Recolecciones** (solo en Operativo)
 
 Muestra las paradas de la **ruta seleccionada** arriba.
 
@@ -99,7 +105,7 @@ Muestra las paradas de la **ruta seleccionada** arriba.
 | **+ Agregar recolección** | Agregar una parada manual a la ruta (no disponible si la ruta ya está finalizada) |
 | **Eliminar** | Quitar una parada |
 
-### 3.2 Mapa y reorden de paradas
+### 3.4 Mapa y reorden de paradas
 
 1. Seleccioná una ruta
 2. Tocá **Ver mapa**
@@ -109,7 +115,7 @@ Muestra las paradas de la **ruta seleccionada** arriba.
 
 Los marcadores se colorean por **zona** cuando está disponible.
 
-### 3.4 Suspender y reactivar una ruta
+### 3.5 Suspender y reactivar una ruta
 
 Usá **Suspender** cuando una ruta no debe ejecutarse temporalmente (clima, vehículo, cambio de planificación, etc.).
 
@@ -125,13 +131,13 @@ Usá **Suspender** cuando una ruta no debe ejecutarse temporalmente (clima, veh�
 - El recolector la ve en la sección **Suspendidas** de Mis rutas
 - No puede iniciarla, abrir Maps, cargar paradas ni finalizarla
 
-**Reactivar:**
+**Reactivar** (Operativo — ruta **Realizado** o **Suspendida**):
 
-1. Abrí **Ver detalle** de una ruta suspendida
-2. Tocá **Reactivar ruta** y confirmá
-3. Vuelve a estar disponible para el recolector (como pendiente o en proceso, según si ya había iniciado la jornada)
+1. En **Operativo**, tocá **Reactivar** en la fila de la ruta o abrí **Ver detalle** → **Reactivar ruta**
+2. Confirmá la acción
+3. La ruta pasa a **En proceso**; el recolector puede operarla de nuevo (si estaba en Realizado, se anulan los datos de cierre del recolector)
 
-### 3.5 Parámetros de sistema
+### 3.6 Parámetros de sistema
 
 Menú **Parámetros** (arriba) → `/panel/parametros`
 
@@ -142,7 +148,7 @@ Desde acá configurás el **precio de bolsa extra**, que usa el recolector al ca
 - Solo podés **agregar un precio nuevo** (no editar los anteriores); queda historial con fecha de vigencia
 - El precio vigente se aplica automáticamente en la app del recolector
 
-### 3.6 Gestión de usuarios
+### 3.7 Gestión de usuarios
 
 Menú **Usuarios** (arriba) → `/panel/usuarios`
 
@@ -163,7 +169,7 @@ Menú **Usuarios** (arriba) → `/panel/usuarios`
 - Puede resetear contraseña de operarios y recolectores
 - **No** puede cambiar la contraseña del superadmin desde este panel (usa recuperación por correo)
 
-### 3.7 Tareas de configuración (una vez)
+### 3.8 Tareas de configuración (una vez)
 
 Estas tareas las hace normalmente el superadmin o alguien técnico al inicio:
 
@@ -348,7 +354,7 @@ Cuando terminaste todas las paradas del día:
 2. Verificá que **todas** las recolecciones estén **Visitadas** o **Canceladas**
 3. Tocá **Finalizar ruta** (si falta algo, el botón queda deshabilitado y aparece el **motivo** debajo)
 4. Completá el **formulario de cierre**:
-   - **Kilómetros finales** (obligatorio; deben ser **menores o iguales** a los km iniciales)
+   - **Kilómetros finales** (obligatorio; deben ser **mayores o iguales** a los km iniciales)
    - **Descarga realizada** (casilla)
    - **Combustible**, **Descuento**, **Otros gastos** (opcionales; solo si hubo **efectivo recaudado**)
    - **Total efectivo** (se calcula automáticamente: efectivo recaudado − gastos)
@@ -462,7 +468,7 @@ Documentación técnica de la integración: [SHEETS_INTEGRATION.md](./SHEETS_INT
 ### Kilómetros finales no me deja finalizar
 
 - Son **obligatorios**
-- Deben ser **menores o iguales** a los km iniciales de la ruta
+- Deben ser **mayores o iguales** a los km iniciales de la ruta
 
 ### No puedo agregar recolección (operario)
 

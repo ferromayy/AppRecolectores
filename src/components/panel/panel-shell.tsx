@@ -20,7 +20,11 @@ export function PanelShell({ children, role, userName }: Props) {
   const links = [{ href: "/panel", label: isStaffRole(role) ? "Operativo" : "Inicio" }];
 
   if (isStaffRole(role)) {
-    links.push({ href: "/panel/parametros", label: "Parámetros" });
+    links.push(
+      { href: "/panel/kpis", label: "KPIs" },
+      { href: "/panel/historial", label: "Historial" },
+      { href: "/panel/parametros", label: "Parámetros" },
+    );
   }
 
   if (canManageUsers({ role })) {

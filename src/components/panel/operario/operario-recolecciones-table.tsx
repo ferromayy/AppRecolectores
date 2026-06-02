@@ -11,7 +11,7 @@ import {
 type Props = {
   recolecciones: RecoleccionOperarioRow[];
   rutaSeleccionada: boolean;
-  onEditar: (id: string) => void;
+  onEditar?: (id: string) => void;
 };
 
 export function OperarioRecoleccionesTable({
@@ -54,7 +54,9 @@ export function OperarioRecoleccionesTable({
             <th className="px-3 py-3 font-medium">Detalle</th>
             <th className="px-3 py-3 font-medium">Firma</th>
             <th className="px-3 py-3 font-medium">Firmante</th>
-            <th className="px-3 py-3 font-medium text-center">Acciones</th>
+            {onEditar && (
+              <th className="px-3 py-3 font-medium text-center">Acciones</th>
+            )}
           </tr>
         </thead>
         <tbody>
@@ -105,15 +107,17 @@ export function OperarioRecoleccionesTable({
                 )}
               </td>
               <td className="px-3 py-2.5">{item.nombre_firmante || "—"}</td>
-              <td className="px-3 py-2.5 text-center">
-                <button
-                  type="button"
-                  onClick={() => onEditar(item.id)}
-                  className="rounded-lg border border-zinc-200 bg-white px-2.5 py-1 text-xs font-medium text-zinc-700 hover:bg-zinc-50 dark:border-zinc-700 dark:bg-zinc-900 dark:text-zinc-200 dark:hover:bg-zinc-800"
-                >
-                  Editar
-                </button>
-              </td>
+              {onEditar && (
+                <td className="px-3 py-2.5 text-center">
+                  <button
+                    type="button"
+                    onClick={() => onEditar(item.id)}
+                    className="rounded-lg border border-zinc-200 bg-white px-2.5 py-1 text-xs font-medium text-zinc-700 hover:bg-zinc-50 dark:border-zinc-700 dark:bg-zinc-900 dark:text-zinc-200 dark:hover:bg-zinc-800"
+                  >
+                    Editar
+                  </button>
+                </td>
+              )}
             </tr>
           ))}
         </tbody>

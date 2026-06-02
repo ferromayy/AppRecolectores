@@ -36,8 +36,8 @@ export function parseRecolectorCierreRutaBody(
   const km_final_raw = asNumber(body.km_final);
   if (km_final_raw === null) return { ok: false, error: "Kilómetros finales inválidos" };
   if (km_final_raw < 0) return { ok: false, error: "Kilómetros finales inválidos" };
-  if (ctx.kmInicial != null && km_final_raw > ctx.kmInicial) {
-    return { ok: false, error: "Los kilómetros finales no pueden ser mayores a los iniciales" };
+  if (ctx.kmInicial != null && km_final_raw < ctx.kmInicial) {
+    return { ok: false, error: "Los kilómetros finales no pueden ser menores a los iniciales" };
   }
 
   const descarga = Boolean(body.descarga);

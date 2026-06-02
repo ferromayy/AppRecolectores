@@ -62,7 +62,7 @@ export async function POST(request: Request, { params }: Props) {
     );
   }
 
-  if (ruta.estado === "completada" || ruta.estado === "cancelada") {
+  if (ruta.estado === "completada" || ruta.estado === "cerrada" || ruta.estado === "cancelada") {
     return NextResponse.json(
       { ok: false, error: "No se puede iniciar una ruta finalizada o cancelada" },
       { status: 400 },
@@ -86,6 +86,7 @@ export async function POST(request: Request, { params }: Props) {
     estado: "en_curso",
     km_inicial: parsed.data.km_inicial,
     insumos_inicio: parsed.data.insumos as Json,
+    inicio_jornada_at: now,
     metadata: { ...existingMetadata, inicio_jornada_at: now } as Json,
   };
 

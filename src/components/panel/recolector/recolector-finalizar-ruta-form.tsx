@@ -60,8 +60,8 @@ export function RecolectorFinalizarRutaForm({
     if (kmFinal.trim() === "") return "Completá los kilómetros finales para poder finalizar.";
     if (kmFinalValue === null) return "Los kilómetros finales deben ser un número válido.";
     if (kmFinalValue < 0) return "Los kilómetros finales no pueden ser negativos.";
-    if (kmInicial != null && kmFinalValue > kmInicial) {
-      return "Los kilómetros finales no pueden ser mayores a los iniciales.";
+    if (kmInicial != null && kmFinalValue < kmInicial) {
+      return "Los kilómetros finales no pueden ser menores a los iniciales.";
     }
     return null;
   }, [saving, kmFinal, kmFinalValue, kmInicial]);
@@ -84,8 +84,8 @@ export function RecolectorFinalizarRutaForm({
       setError("Los kilómetros finales deben ser un número válido");
       return;
     }
-    if (kmInicial != null && km > kmInicial) {
-      setError("Los kilómetros finales no pueden ser mayores a los iniciales");
+    if (kmInicial != null && km < kmInicial) {
+      setError("Los kilómetros finales no pueden ser menores a los iniciales");
       return;
     }
 

@@ -23,6 +23,7 @@ export type RutaEstado =
   | "activa"
   | "en_curso"
   | "completada"
+  | "cerrada"
   | "cancelada"
   | "suspendida";
 

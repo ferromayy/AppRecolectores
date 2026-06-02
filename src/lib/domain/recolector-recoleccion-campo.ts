@@ -1,4 +1,27 @@
 import { calcPrecioTotalCobrar } from "@/lib/domain/sistema-parametros";
+import type { RecoleccionOperativaEstado, RutaEstado } from "@/types/database";
+
+/** Estados en los que la recolección ya fue cargada por el recolector. */
+export const RECOLECCION_ESTADOS_CERRADOS: RecoleccionOperativaEstado[] = [
+  "visitada",
+  "cancelada",
+  "omitida",
+];
+
+export function recoleccionCerradaParaRecolector(
+  estado: RecoleccionOperativaEstado,
+): boolean {
+  return RECOLECCION_ESTADOS_CERRADOS.includes(estado);
+}
+
+export function recolectorPuedeEditarRecoleccion(
+  estadoRecoleccion: RecoleccionOperativaEstado,
+  estadoRuta: RutaEstado,
+): boolean {
+  if (estadoRuta === "completada" || estadoRuta === "cerrada" || estadoRuta === "cancelada") return false;
+  if (estadoRuta === "suspendida") return false;
+  return !recoleccionCerradaParaRecolector(estadoRecoleccion);
+}
 
 function str(value: unknown): string {
   if (value === null || value === undefined) return "";

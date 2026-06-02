@@ -17,6 +17,10 @@ const MIGRATION_FILES = [
   "20260524130000_recoleccion_campo_campos.sql",
   "20260524140000_fix_missing_operativo_columns.sql",
   "20260525120000_sistema_parametros_precio.sql",
+  "20260526120000_ruta_estado_suspendida.sql",
+  "20260531120000_ruta_cierre_recolector_campos.sql",
+  "20260601120000_ruta_estado_terminada.sql",
+  "20260602120000_ruta_estado_terminada_a_cerrada.sql",
 ];
 
 function loadEnv() {

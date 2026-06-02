@@ -64,7 +64,7 @@ export default async function IniciarRutaPage({ params }: Props) {
     );
   }
 
-  if (ruta.estado === "completada" || ruta.estado === "cancelada") {
+  if (ruta.estado === "completada" || ruta.estado === "cerrada" || ruta.estado === "cancelada") {
     redirect(`/panel/mis-rutas/${id}`);
   }
 

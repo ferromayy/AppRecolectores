@@ -6,7 +6,7 @@ import {
   formatTurno,
   type RutaOperarioRow,
 } from "@/lib/domain/operario-dashboard";
-import { puedeSuspenderRuta } from "@/lib/domain/ruta-estado-transiciones";
+import { puedeCierreOperario, puedeReactivarRuta, puedeSuspenderRuta } from "@/lib/domain/ruta-estado-transiciones";
 
 type Props = {
   rutas: RutaOperarioRow[];
@@ -15,7 +15,9 @@ type Props = {
   onVerDetalle: (id: string) => void;
   onVerMapa: (id: string) => void;
   onEditar: (id: string) => void;
-  onSuspender: (id: string) => void;
+  onSuspender?: (id: string) => void;
+  onCierreOperario?: (id: string) => void;
+  onReactivar?: (id: string) => void;
   mapsDisponible: boolean;
 };
 
@@ -27,12 +29,14 @@ export function OperarioRutasTable({
   onVerMapa,
   onEditar,
   onSuspender,
+  onCierreOperario,
+  onReactivar,
   mapsDisponible,
 }: Props) {
   if (rutas.length === 0) {
     return (
       <div className="rounded-xl border border-dashed border-zinc-300 bg-white p-8 text-center text-sm text-zinc-500 dark:border-zinc-700 dark:bg-zinc-900">
-        Todavía no hay rutas importadas desde la planilla.
+        Todavía no hay rutas activas, suspendidas ni realizadas pendientes de cierre operario.
       </div>
     );
   }
@@ -144,7 +148,31 @@ export function OperarioRutasTable({
                     >
                       Editar
                     </button>
-                    {puedeSuspenderRuta(ruta.estado) && (
+                    {onCierreOperario && puedeCierreOperario(ruta.estado) && (
+                      <button
+                        type="button"
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          onCierreOperario(ruta.id);
+                        }}
+                        className="rounded-lg border border-zinc-400 bg-zinc-100 px-2.5 py-1 text-xs font-medium text-zinc-900 hover:bg-zinc-200 dark:border-zinc-600 dark:bg-zinc-800 dark:text-zinc-100 dark:hover:bg-zinc-700"
+                      >
+                        Cierre operario
+                      </button>
+                    )}
+                    {onReactivar && puedeReactivarRuta(ruta.estado) && (
+                      <button
+                        type="button"
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          onReactivar(ruta.id);
+                        }}
+                        className="rounded-lg border border-emerald-200 bg-emerald-50 px-2.5 py-1 text-xs font-medium text-emerald-800 hover:bg-emerald-100 dark:border-emerald-900 dark:bg-emerald-950 dark:text-emerald-300 dark:hover:bg-emerald-900"
+                      >
+                        Reactivar
+                      </button>
+                    )}
+                    {onSuspender && puedeSuspenderRuta(ruta.estado) && (
                       <button
                         type="button"
                         onClick={(e) => {

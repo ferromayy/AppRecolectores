@@ -49,6 +49,7 @@ export const RUTA_ESTADOS = [
   "activa",
   "en_curso",
   "completada",
+  "cerrada",
   "cancelada",
   "suspendida",
 ] as const;
@@ -60,6 +61,7 @@ export const RUTA_ESTADO_LABELS: Record<RutaEstado, string> = {
   activa: "Activa",
   en_curso: "En curso",
   completada: "Completada",
+  cerrada: "Cerrada",
   cancelada: "Cancelada",
   suspendida: "Suspendida",
 };
@@ -70,6 +72,7 @@ export const RUTA_ESTADO_OPERARIO_LABELS: Record<RutaEstado, string> = {
   activa: "Pendiente",
   en_curso: "En proceso",
   completada: "Realizado",
+  cerrada: "Cerrada",
   cancelada: "Cancelada",
   suspendida: "Suspendida",
 };

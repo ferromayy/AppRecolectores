@@ -1,7 +1,9 @@
-import type { Database } from "@/types/database";
+import type { Database, RutaEstado } from "@/types/database";
 import {
   formatPrecioDisplay,
   parsePrecioRetiro,
+  recoleccionCerradaParaRecolector,
+  recolectorPuedeEditarRecoleccion,
 } from "@/lib/domain/recolector-recoleccion-campo";
 import { RECOLECCION_OPERATIVA_LABELS } from "@/lib/domain/constants";
 import { formatParametroMoney } from "@/lib/domain/sistema-parametros";
@@ -32,15 +34,18 @@ export type RecoleccionCampoFormData = {
   nombreFirmante: string;
   firmaConfirmada: boolean;
   completada: boolean;
+  soloLectura: boolean;
 };
 
 export function buildRecoleccionCampoFormData(
   rutaId: string,
   item: RecoleccionRow,
   precioBolsaExtra = 0,
+  estadoRuta: RutaEstado = "en_curso",
 ): RecoleccionCampoFormData {
   const precioRetiro = parsePrecioRetiro(item.precio);
-  const completada = ["visitada", "cancelada", "omitida"].includes(item.estado_operativo);
+  const completada = recoleccionCerradaParaRecolector(item.estado_operativo);
+  const soloLectura = !recolectorPuedeEditarRecoleccion(item.estado_operativo, estadoRuta);
 
   return {
     id: item.id,
@@ -66,6 +71,7 @@ export function buildRecoleccionCampoFormData(
     nombreFirmante: item.nombre_firmante ?? "",
     firmaConfirmada: !!item.firma_digital,
     completada,
+    soloLectura,
   };
 }
 

@@ -165,7 +165,11 @@ export function OperarioRutaDetalleModal({
       <OperarioConfirmDialog
         open={confirmAction === "reactivar"}
         title="Reactivar ruta"
-        message="La ruta volverá a estar disponible para el recolector. ¿Continuar?"
+        message={
+          detalle.estado === "completada"
+            ? "La ruta volverá a En proceso y el recolector podrá seguir operándola. Se anularán los datos de cierre del recolector. ¿Continuar?"
+            : "La ruta volverá a estado En proceso y aparecerá en el panel operativo. ¿Continuar?"
+        }
         confirmLabel="Reactivar"
         loading={loading}
         onConfirm={() => void handleEstadoAction("reactivar")}

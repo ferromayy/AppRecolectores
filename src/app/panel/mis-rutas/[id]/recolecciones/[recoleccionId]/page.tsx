@@ -32,7 +32,9 @@ export default async function RecolectorRecoleccionCampoPage({ params }: Props) 
 
   if (!ruta) notFound();
 
-  if (ruta.estado === "suspendida") {
+  if (ruta.estado === "completada" || ruta.estado === "cerrada" || ruta.estado === "cancelada") {
+    // Solo consulta: la ruta ya está cerrada
+  } else if (ruta.estado === "suspendida") {
     return (
       <div className="space-y-4">
         <p className="rounded-2xl border border-orange-200 bg-orange-50 p-4 text-sm text-orange-900 dark:border-orange-900 dark:bg-orange-950/40 dark:text-orange-200">
@@ -77,7 +79,12 @@ export default async function RecolectorRecoleccionCampoPage({ params }: Props) 
   if (!recoleccion) notFound();
 
   const precioBolsaExtra = await fetchPrecioBolsaExtraActivo();
-  const formData = buildRecoleccionCampoFormData(rutaId, recoleccion, precioBolsaExtra);
+  const formData = buildRecoleccionCampoFormData(
+    rutaId,
+    recoleccion,
+    precioBolsaExtra,
+    ruta.estado,
+  );
 
   return <RecolectorRecoleccionCampoForm data={formData} rutaNombre={ruta.nombre} />;
 }

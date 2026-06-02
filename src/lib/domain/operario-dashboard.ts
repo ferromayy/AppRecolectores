@@ -9,6 +9,14 @@ type RutaRow = Database["public"]["Tables"]["rutas"]["Row"];
 type RecoleccionRow = Database["public"]["Tables"]["ruta_recolecciones"]["Row"];
 type ProfileRow = Database["public"]["Tables"]["profiles"]["Row"];
 
+import {
+  buildInsumosHistorialDetalle,
+  formatDuracionRecoleccion,
+  type InsumosHistorialDetalle,
+} from "@/lib/domain/operario-historial-ruta";
+import { getInicioJornadaAt } from "@/lib/domain/recolector-ruta";
+import { formatRutaEstado, formatRutaFecha } from "@/lib/domain/rutas";
+
 export type RecolectorOption = {
   id: string;
   nombre: string;
@@ -34,6 +42,13 @@ export type RutaOperarioRow = {
   monto_transferencia: number | null;
   total_recaudado: number;
   observaciones_operario: string | null;
+  /** Campos usados en la tabla Historial */
+  duracion_recoleccion: string | null;
+  operario_nombre: string | null;
+  km_inicial: number | null;
+  km_final: number | null;
+  observaciones_recolector: string | null;
+  insumos_detalle: InsumosHistorialDetalle;
 };
 
 export type RecoleccionOperarioRow = {
@@ -61,6 +76,18 @@ export type RecoleccionOperarioRow = {
   detalle: string | null;
   firma_digital: string | null;
   nombre_firmante: string | null;
+  monto_qr: number | null;
+  motivo_cancelacion: string | null;
+  bolsas_llenas: number | null;
+  biotachos_llenos: number | null;
+  bolsas_nuevas: number | null;
+  biotachos_nuevos: number | null;
+  nota_encargado: string | null;
+  dia: string | null;
+  latitud: number | null;
+  longitud: number | null;
+  direccion_google: string | null;
+  coordenadas_dms: string | null;
 };
 
 export type RutaDetalleOperario = {
@@ -96,9 +123,13 @@ export function buildRutaOperarioRows(
   rutas: RutaRow[],
   recolecciones: RecoleccionRow[],
   recolectores: Pick<ProfileRow, "id" | "full_name" | "email">[],
+  operarios: Pick<ProfileRow, "id" | "full_name" | "email">[] = [],
 ): RutaOperarioRow[] {
   const recMap = new Map(
     recolectores.map((r) => [r.id, r.full_name || r.email]),
+  );
+  const operarioMap = new Map(
+    operarios.map((r) => [r.id, r.full_name || r.email || null]),
   );
   const byRuta = new Map<string, RecoleccionRow[]>();
   for (const item of recolecciones) {
@@ -118,6 +149,10 @@ export function buildRutaOperarioRows(
     ).length;
 
     const recaudadoRecolecciones = sumRecaudado(items);
+    const efectivoRecolecciones = items.reduce(
+      (acc, item) => acc + num(item.monto_efectivo),
+      0,
+    );
     const efectivoRuta = ruta.monto_efectivo != null ? num(ruta.monto_efectivo) : null;
     const transferenciaRuta =
       ruta.monto_transferencia != null ? num(ruta.monto_transferencia) : null;
@@ -125,6 +160,16 @@ export function buildRutaOperarioRows(
       efectivoRuta != null || transferenciaRuta != null
         ? num(efectivoRuta) + num(transferenciaRuta)
         : recaudadoRecolecciones;
+
+    const insumos_detalle = buildInsumosHistorialDetalle(ruta, {
+      puntosRecoleccion: items.length,
+      exitosos: exitosas,
+      pendientes,
+      canceladas,
+      efectivoRecolecciones,
+    });
+
+    const inicioJornadaAt = getInicioJornadaAt(ruta);
 
     return {
       id: ruta.id,
@@ -141,13 +186,24 @@ export function buildRutaOperarioRows(
       recolecciones_pendientes: pendientes,
       recolecciones_canceladas: canceladas,
       km_recorridos: ruta.km_recorridos != null ? num(ruta.km_recorridos) : null,
-      inicio_jornada_at: ruta.inicio_jornada_at,
+      inicio_jornada_at: inicioJornadaAt,
       cierre_recolector_at: ruta.cierre_recolector_at,
       cierre_operario_at: ruta.cierre_operario_at,
       monto_efectivo: efectivoRuta,
       monto_transferencia: transferenciaRuta,
       total_recaudado,
       observaciones_operario: ruta.observaciones_operario,
+      duracion_recoleccion: formatDuracionRecoleccion(
+        inicioJornadaAt,
+        ruta.cierre_recolector_at,
+      ),
+      operario_nombre: ruta.cierre_operario_por
+        ? (operarioMap.get(ruta.cierre_operario_por) ?? null)
+        : null,
+      km_inicial: ruta.km_inicial != null ? num(ruta.km_inicial) : null,
+      km_final: ruta.km_final != null ? num(ruta.km_final) : null,
+      observaciones_recolector: ruta.observaciones_recolector,
+      insumos_detalle,
     };
   });
 }
@@ -189,7 +245,78 @@ export function buildRecoleccionOperarioRows(
       detalle: item.detalle,
       firma_digital: item.firma_digital,
       nombre_firmante: item.nombre_firmante,
+      monto_qr: item.monto_qr != null ? num(item.monto_qr) : null,
+      motivo_cancelacion: item.motivo_cancelacion,
+      bolsas_llenas: item.bolsas_llenas,
+      biotachos_llenos: item.biotachos_llenos,
+      bolsas_nuevas: item.bolsas_nuevas,
+      biotachos_nuevos: item.biotachos_nuevos,
+      nota_encargado: item.nota_encargado,
+      dia: item.dia || null,
+      latitud: item.latitud,
+      longitud: item.longitud,
+      direccion_google: item.direccion_google,
+      coordenadas_dms: item.coordenadas_dms,
     }));
+}
+
+export function formatRutaHorario(fecha: string, turno: RutaTurno | null): string {
+  return `${formatRutaFecha(fecha)} · ${formatTurno(turno)}`;
+}
+
+export function formatCantidadBolsas(item: Pick<
+  RecoleccionOperarioRow,
+  "bolsas_llenas" | "bolsas_nuevas"
+>): string {
+  const llenas = item.bolsas_llenas ?? 0;
+  const nuevas = item.bolsas_nuevas ?? 0;
+  if (llenas === 0 && nuevas === 0) return "—";
+  if (nuevas === 0) return String(llenas);
+  if (llenas === 0) return String(nuevas);
+  return `${llenas + nuevas}`;
+}
+
+export function formatCantidadBolsasDetalle(item: Pick<
+  RecoleccionOperarioRow,
+  "bolsas_llenas" | "bolsas_nuevas"
+>): string | undefined {
+  const llenas = item.bolsas_llenas ?? 0;
+  const nuevas = item.bolsas_nuevas ?? 0;
+  if (llenas === 0 && nuevas === 0) return undefined;
+  const parts: string[] = [];
+  if (llenas > 0) parts.push(`${llenas} llena(s)`);
+  if (nuevas > 0) parts.push(`${nuevas} nueva(s)`);
+  return parts.join(", ");
+}
+
+export function formatCantidadBiotachos(item: Pick<
+  RecoleccionOperarioRow,
+  "biotachos_llenos" | "biotachos_nuevos"
+>): string {
+  const llenos = item.biotachos_llenos ?? 0;
+  const nuevos = item.biotachos_nuevos ?? 0;
+  if (llenos === 0 && nuevos === 0) return "—";
+  if (nuevos === 0) return String(llenos);
+  if (llenos === 0) return String(nuevos);
+  return `${llenos + nuevos}`;
+}
+
+export function formatCantidadBiotachosDetalle(item: Pick<
+  RecoleccionOperarioRow,
+  "biotachos_llenos" | "biotachos_nuevos"
+>): string | undefined {
+  const llenos = item.biotachos_llenos ?? 0;
+  const nuevos = item.biotachos_nuevos ?? 0;
+  if (llenos === 0 && nuevos === 0) return undefined;
+  const parts: string[] = [];
+  if (llenos > 0) parts.push(`${llenos} lleno(s)`);
+  if (nuevos > 0) parts.push(`${nuevos} nuevo(s)`);
+  return parts.join(", ");
+}
+
+export function esFirmaDigitalImagen(firma: string | null): boolean {
+  if (!firma) return false;
+  return firma.startsWith("data:image") || firma.startsWith("http");
 }
 
 export function buildRutaDetalle(
@@ -233,6 +360,11 @@ export function pickDefaultRutaId(rutas: RutaOperarioRow[]): string | null {
   return bestFuture?.id ?? bestPast?.id ?? rutas[0]?.id ?? null;
 }
 
+export function formatKm(value: number | null | undefined): string {
+  if (value === null || value === undefined) return "—";
+  return new Intl.NumberFormat("es-AR", { maximumFractionDigits: 1 }).format(value);
+}
+
 export function formatTurno(turno: RutaTurno | null): string {
   if (!turno) return "—";
   return RUTA_TURNO_LABELS[turno];
@@ -274,4 +406,4 @@ export function formatHoraReal(value: string | null | undefined): string {
   });
 }
 
-export { formatRutaFecha, formatRutaEstado } from "@/lib/domain/rutas";
+export { formatRutaFecha, formatRutaEstado };

@@ -16,6 +16,7 @@ export const RECOLECTOR_RUTA_ESTADO_LABELS: Record<RutaEstado, string> = {
   activa: "Pendiente",
   en_curso: "En proceso",
   completada: "Finalizada",
+  cerrada: "Finalizada",
   cancelada: "Cancelada",
   suspendida: "Suspendida",
 };
@@ -135,10 +136,11 @@ export function buildRecolectorRutaDetalle(
     !rutaIniciada &&
     !rutaSuspendida &&
     ruta.estado !== "completada" &&
+    ruta.estado !== "cerrada" &&
     ruta.estado !== "cancelada";
 
   const insumosInicio = parseInsumosInicio(ruta.insumos_inicio);
-  const rutaFinalizada = ruta.estado === "completada";
+  const rutaFinalizada = ruta.estado === "completada" || ruta.estado === "cerrada";
   const finalizar = evaluarFinalizarRuta(recolecciones, ruta.estado, rutaIniciada);
 
   return {
