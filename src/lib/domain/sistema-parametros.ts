@@ -48,13 +48,13 @@ export const PARAMETRO_PRECIO_UI: Record<
   "bolsa-punto": {
     titulo: "Precio bolsa punto",
     descripcion:
-      "Precio de bolsa punto configurable. Solo podés agregar un nuevo precio; el anterior se cierra automáticamente.",
+      "Cobro Empresa + Punto: precio por cada bolsa nueva vendida en campo. Solo podés agregar un nuevo precio; el anterior se cierra automáticamente.",
     inputLabel: "Nuevo precio bolsa punto *",
   },
   "bolsa-llena-punto": {
     titulo: "Precio bolsa llena punto",
     descripcion:
-      "Precio de bolsa llena punto configurable. Solo podés agregar un nuevo precio; el anterior se cierra automáticamente.",
+      "Cobro Empresa + Punto: precio por cada bolsa llena punto en campo. Solo podés agregar un nuevo precio; el anterior se cierra automáticamente.",
     inputLabel: "Nuevo precio bolsa llena punto *",
   },
 };
@@ -68,7 +68,7 @@ export function resolveParametroPrecioClave(slug: string): PrecioParametroClave 
 
 export const BOLSAS_LLENAS_INCLUIDAS = 2;
 
-export type PrecioCobroRegla = "estandar" | "empresa" | "mixto";
+export type PrecioCobroRegla = "estandar" | "empresa" | "empresa_punto" | "mixto";
 
 export type PrecioCobroInput = {
   unidad: string | null;
@@ -76,7 +76,11 @@ export type PrecioCobroInput = {
   precioRetiro: number;
   precioBolsaExtra: number;
   precioRetiroReciclableMixto: number;
+  precioBolsaPunto: number;
+  precioBolsaLlenaPunto: number;
   bolsasLlenas: number;
+  bolsasLlenasPunto: number;
+  bolsasNuevasVendidas: number;
 };
 
 export function normalizeUnidad(unidad: string | null | undefined): string {
@@ -95,10 +99,21 @@ export function isTipoServicioMixto(tipoServicio: string | null | undefined): bo
   return normalizeTipoServicio(tipoServicio).toLowerCase() === "mixto";
 }
 
+/** Empresa + tipo de servicio Punto/Puntos: cobro por bolsa llena punto y bolsa punto. */
+export function isEmpresaPuntoCobro(
+  unidad: string | null | undefined,
+  tipoServicio: string | null | undefined,
+): boolean {
+  if (!isUnidadEmpresa(unidad)) return false;
+  const tipo = normalizeTipoServicio(tipoServicio).toLowerCase();
+  return tipo === "punto" || tipo === "puntos";
+}
+
 export function resolvePrecioCobroRegla(
   unidad: string | null | undefined,
   tipoServicio: string | null | undefined,
 ): PrecioCobroRegla {
+  if (isEmpresaPuntoCobro(unidad, tipoServicio)) return "empresa_punto";
   if (isUnidadEmpresa(unidad)) return "empresa";
   if (isTipoServicioMixto(tipoServicio)) return "mixto";
   return "estandar";
@@ -130,13 +145,29 @@ export function calcPrecioTotalCobrar(
     precioRetiro,
     precioBolsaExtra,
     precioRetiroReciclableMixto: 0,
+    precioBolsaPunto: 0,
+    precioBolsaLlenaPunto: 0,
     bolsasLlenas,
+    bolsasLlenasPunto: 0,
+    bolsasNuevasVendidas: 0,
   });
+}
+
+export function calcPrecioEmpresaPunto(input: PrecioCobroInput): number {
+  const puntos = sanitizeBolsasLlenas(input.bolsasLlenasPunto);
+  const vendidas = sanitizeBolsasLlenas(input.bolsasNuevasVendidas);
+  return (
+    puntos * input.precioBolsaLlenaPunto + vendidas * input.precioBolsaPunto
+  );
 }
 
 export function calcPrecioTotalCobrarConReglas(input: PrecioCobroInput): number {
   const bolsas = sanitizeBolsasLlenas(input.bolsasLlenas);
   const regla = resolvePrecioCobroRegla(input.unidad, input.tipoServicio);
+
+  if (regla === "empresa_punto") {
+    return calcPrecioEmpresaPunto(input);
+  }
 
   if (regla === "empresa") {
     return input.precioRetiro;
@@ -160,20 +191,32 @@ export type PrecioCobroDetalle = {
   precioRetiro: number;
   precioBolsaExtra: number;
   precioRetiroReciclableMixto: number;
+  precioBolsaPunto: number;
+  precioBolsaLlenaPunto: number;
   bolsasLlenas: number;
+  bolsasLlenasPunto: number;
+  bolsasNuevasVendidas: number;
   bolsasConTarifaMixto: number;
   bolsasExtra: number;
   montoRetiroMixto: number;
   montoBolsaExtra: number;
+  montoBolsaLlenaPunto: number;
+  montoBolsaPunto: number;
   precioTotal: number;
   precioRetiroLabel: string;
   precioBolsaExtraLabel: string;
   precioRetiroReciclableMixtoLabel: string;
+  precioBolsaPuntoLabel: string;
+  precioBolsaLlenaPuntoLabel: string;
   montoRetiroMixtoLabel: string;
   montoBolsaExtraLabel: string;
+  montoBolsaLlenaPuntoLabel: string;
+  montoBolsaPuntoLabel: string;
   precioTotalLabel: string;
   bolsaExtraDetalleLabel: string | null;
   retiroMixtoDetalleLabel: string | null;
+  bolsaLlenaPuntoDetalleLabel: string | null;
+  bolsaPuntoDetalleLabel: string | null;
   ayudaCobro: string;
 };
 
@@ -184,12 +227,73 @@ function sanitizeBolsasLlenas(bolsasLlenas: number): number {
 
 export function buildPrecioCobroDetalle(input: PrecioCobroInput): PrecioCobroDetalle {
   const bolsasLlenas = sanitizeBolsasLlenas(input.bolsasLlenas);
+  const bolsasLlenasPunto = sanitizeBolsasLlenas(input.bolsasLlenasPunto);
+  const bolsasNuevasVendidas = sanitizeBolsasLlenas(input.bolsasNuevasVendidas);
   const regla = resolvePrecioCobroRegla(input.unidad, input.tipoServicio);
   const precioRetiroLabel = formatParametroMoney(input.precioRetiro);
   const precioBolsaExtraLabel = formatParametroMoney(input.precioBolsaExtra);
   const precioRetiroReciclableMixtoLabel = formatParametroMoney(
     input.precioRetiroReciclableMixto,
   );
+  const precioBolsaPuntoLabel = formatParametroMoney(input.precioBolsaPunto);
+  const precioBolsaLlenaPuntoLabel = formatParametroMoney(input.precioBolsaLlenaPunto);
+
+  const baseDetalle = {
+    precioBolsaPunto: input.precioBolsaPunto,
+    precioBolsaLlenaPunto: input.precioBolsaLlenaPunto,
+    bolsasLlenasPunto,
+    bolsasNuevasVendidas,
+    precioBolsaPuntoLabel,
+    precioBolsaLlenaPuntoLabel,
+    montoBolsaLlenaPunto: 0,
+    montoBolsaPunto: 0,
+    montoBolsaLlenaPuntoLabel: formatParametroMoney(0),
+    montoBolsaPuntoLabel: formatParametroMoney(0),
+    bolsaLlenaPuntoDetalleLabel: null as string | null,
+    bolsaPuntoDetalleLabel: null as string | null,
+  };
+
+  if (regla === "empresa_punto") {
+    const montoBolsaLlenaPunto = bolsasLlenasPunto * input.precioBolsaLlenaPunto;
+    const montoBolsaPunto = bolsasNuevasVendidas * input.precioBolsaPunto;
+    const precioTotal = montoBolsaLlenaPunto + montoBolsaPunto;
+
+    return {
+      regla,
+      precioRetiro: input.precioRetiro,
+      precioBolsaExtra: input.precioBolsaExtra,
+      precioRetiroReciclableMixto: input.precioRetiroReciclableMixto,
+      bolsasLlenas,
+      bolsasConTarifaMixto: 0,
+      bolsasExtra: 0,
+      montoRetiroMixto: 0,
+      montoBolsaExtra: 0,
+      precioTotal,
+      precioRetiroLabel,
+      precioBolsaExtraLabel,
+      precioRetiroReciclableMixtoLabel,
+      montoRetiroMixtoLabel: formatParametroMoney(0),
+      montoBolsaExtraLabel: formatParametroMoney(0),
+      precioTotalLabel: formatParametroMoney(precioTotal),
+      bolsaExtraDetalleLabel: null,
+      retiroMixtoDetalleLabel: null,
+      ...baseDetalle,
+      montoBolsaLlenaPunto,
+      montoBolsaPunto,
+      montoBolsaLlenaPuntoLabel: formatParametroMoney(montoBolsaLlenaPunto),
+      montoBolsaPuntoLabel: formatParametroMoney(montoBolsaPunto),
+      bolsaLlenaPuntoDetalleLabel:
+        bolsasLlenasPunto > 0
+          ? `${bolsasLlenasPunto} bolsa(s) llena(s) punto × ${precioBolsaLlenaPuntoLabel}`
+          : null,
+      bolsaPuntoDetalleLabel:
+        bolsasNuevasVendidas > 0
+          ? `${bolsasNuevasVendidas} bolsa(s) nueva(s) vendida(s) × ${precioBolsaPuntoLabel}`
+          : null,
+      ayudaCobro:
+        "Empresa + Punto: total = (bolsas llenas punto × precio bolsa llena punto) + (bolsas nuevas vendidas × precio bolsa punto). Los contadores hogar/biotacho son informativos.",
+    };
+  }
 
   if (regla === "empresa") {
     return {
@@ -211,6 +315,7 @@ export function buildPrecioCobroDetalle(input: PrecioCobroInput): PrecioCobroDet
       precioTotalLabel: precioRetiroLabel,
       bolsaExtraDetalleLabel: null,
       retiroMixtoDetalleLabel: null,
+      ...baseDetalle,
       ayudaCobro:
         "Empresa: el total es el precio de retiro de la planilla; no cambia por la cantidad de bolsas llenas.",
     };
@@ -248,6 +353,7 @@ export function buildPrecioCobroDetalle(input: PrecioCobroInput): PrecioCobroDet
         bolsasExtra > 0
           ? `${bolsasExtra} bolsa(s) extra × ${precioBolsaExtraLabel}`
           : null,
+      ...baseDetalle,
       ayudaCobro:
         bolsasLlenas === 0
           ? "Mixto sin bolsas llenas: se usa el precio de retiro de la planilla."
@@ -281,6 +387,7 @@ export function buildPrecioCobroDetalle(input: PrecioCobroInput): PrecioCobroDet
         ? `${bolsasExtra} bolsa(s) extra × ${precioBolsaExtraLabel}`
         : null,
     retiroMixtoDetalleLabel: null,
+    ...baseDetalle,
     ayudaCobro:
       "Las 2 primeras bolsas llenas están incluidas en el precio de retiro. Desde la 3.ª se suma bolsa extra.",
   };

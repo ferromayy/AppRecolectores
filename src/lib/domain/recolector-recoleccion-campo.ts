@@ -1,5 +1,6 @@
 import {
   calcPrecioTotalCobrarConReglas,
+  isEmpresaPuntoCobro,
   type PrecioCobroInput,
 } from "@/lib/domain/sistema-parametros";
 import type { RecoleccionOperativaEstado, RutaEstado } from "@/types/database";
@@ -55,6 +56,8 @@ export function parsePrecioRetiro(precio: string | null | undefined): number {
 export type RecoleccionCampoPayload = {
   motivo_cancelacion: string | null;
   bolsas_llenas: number | null;
+  bolsas_llenas_punto: number | null;
+  bolsas_nuevas_vendidas: number | null;
   biotachos_llenos: number | null;
   bolsas_nuevas: number | null;
   biotachos_nuevos: number | null;
@@ -69,11 +72,12 @@ export type RecoleccionCampoPayload = {
 
 export function parseRecoleccionCampoBody(
   body: Record<string, unknown>,
-  precios: Omit<PrecioCobroInput, "bolsasLlenas">,
+  precios: Omit<PrecioCobroInput, "bolsasLlenas" | "bolsasLlenasPunto" | "bolsasNuevasVendidas">,
 ): { ok: true; data: RecoleccionCampoPayload } | { ok: false; error: string } {
   const motivo_cancelacion = str(body.motivo_cancelacion) || null;
   const nombre_firmante = str(body.nombre_firmante);
   const firmaConfirmada = body.firma_confirmada === true || body.firma_confirmada === "true";
+  const empresaPunto = isEmpresaPuntoCobro(precios.unidad, precios.tipoServicio);
 
   if (!nombre_firmante) {
     return { ok: false, error: "El nombre del firmante es obligatorio" };
@@ -91,6 +95,8 @@ export function parseRecoleccionCampoBody(
       data: {
         motivo_cancelacion,
         bolsas_llenas: null,
+        bolsas_llenas_punto: null,
+        bolsas_nuevas_vendidas: null,
         biotachos_llenos: null,
         bolsas_nuevas: null,
         biotachos_nuevos: null,
@@ -109,6 +115,8 @@ export function parseRecoleccionCampoBody(
   const biotachos_llenos = parseOptionalCount(body.biotachos_llenos);
   const bolsas_nuevas = parseOptionalCount(body.bolsas_nuevas);
   const biotachos_nuevos = parseOptionalCount(body.biotachos_nuevos);
+  const bolsas_llenas_punto = parseOptionalCount(body.bolsas_llenas_punto);
+  const bolsas_nuevas_vendidas = parseOptionalCount(body.bolsas_nuevas_vendidas);
 
   if (
     bolsas_llenas === null ||
@@ -122,9 +130,18 @@ export function parseRecoleccionCampoBody(
     };
   }
 
+  if (empresaPunto && (bolsas_llenas_punto === null || bolsas_nuevas_vendidas === null)) {
+    return {
+      ok: false,
+      error: "Completá bolsas llenas punto y bolsas nuevas vendidas (podés poner 0)",
+    };
+  }
+
   const precio_total = calcPrecioTotalCobrarConReglas({
     ...precios,
     bolsasLlenas: bolsas_llenas,
+    bolsasLlenasPunto: bolsas_llenas_punto ?? 0,
+    bolsasNuevasVendidas: bolsas_nuevas_vendidas ?? 0,
   });
   const monto_efectivo = parseRequiredPayment(body.monto_efectivo);
   const monto_transferencia = parseRequiredPayment(body.monto_transferencia);
@@ -151,6 +168,8 @@ export function parseRecoleccionCampoBody(
     data: {
       motivo_cancelacion: null,
       bolsas_llenas,
+      bolsas_llenas_punto: empresaPunto ? bolsas_llenas_punto : null,
+      bolsas_nuevas_vendidas: empresaPunto ? bolsas_nuevas_vendidas : null,
       biotachos_llenos,
       bolsas_nuevas,
       biotachos_nuevos,

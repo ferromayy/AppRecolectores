@@ -26,6 +26,8 @@ export function RecolectorRecoleccionCampoForm({ data, rutaNombre }: Props) {
   const soloLectura = data.soloLectura;
   const [motivoCancelacion, setMotivoCancelacion] = useState(data.motivoCancelacion);
   const [bolsasLlenas, setBolsasLlenas] = useState(data.bolsasLlenas);
+  const [bolsasLlenasPunto, setBolsasLlenasPunto] = useState(data.bolsasLlenasPunto);
+  const [bolsasNuevasVendidas, setBolsasNuevasVendidas] = useState(data.bolsasNuevasVendidas);
   const [biotachosLlenos, setBiotachosLlenos] = useState(data.biotachosLlenos);
   const [bolsasNuevas, setBolsasNuevas] = useState(data.bolsasNuevas);
   const [biotachosNuevos, setBiotachosNuevos] = useState(data.biotachosNuevos);
@@ -38,8 +40,11 @@ export function RecolectorRecoleccionCampoForm({ data, rutaNombre }: Props) {
   const [saving, setSaving] = useState(false);
 
   const esCancelacion = motivoCancelacion.trim().length > 0;
-  const bolsasLlenasNum =
-    bolsasLlenas.trim() === "" ? 0 : Number.parseInt(bolsasLlenas, 10) || 0;
+  const parseCount = (value: string) =>
+    value.trim() === "" ? 0 : Number.parseInt(value, 10) || 0;
+  const bolsasLlenasNum = parseCount(bolsasLlenas);
+  const bolsasLlenasPuntoNum = parseCount(bolsasLlenasPunto);
+  const bolsasNuevasVendidasNum = parseCount(bolsasNuevasVendidas);
   const cobroDetalle = useMemo(
     () =>
       buildPrecioCobroDetalle({
@@ -48,7 +53,11 @@ export function RecolectorRecoleccionCampoForm({ data, rutaNombre }: Props) {
         precioRetiro: data.precioRetiro,
         precioBolsaExtra: data.precioBolsaExtra,
         precioRetiroReciclableMixto: data.precioRetiroReciclableMixto,
+        precioBolsaPunto: data.precioBolsaPunto,
+        precioBolsaLlenaPunto: data.precioBolsaLlenaPunto,
         bolsasLlenas: bolsasLlenasNum,
+        bolsasLlenasPunto: bolsasLlenasPuntoNum,
+        bolsasNuevasVendidas: bolsasNuevasVendidasNum,
       }),
     [
       data.unidad,
@@ -56,7 +65,11 @@ export function RecolectorRecoleccionCampoForm({ data, rutaNombre }: Props) {
       data.precioRetiro,
       data.precioBolsaExtra,
       data.precioRetiroReciclableMixto,
+      data.precioBolsaPunto,
+      data.precioBolsaLlenaPunto,
       bolsasLlenasNum,
+      bolsasLlenasPuntoNum,
+      bolsasNuevasVendidasNum,
     ],
   );
   const precioRetiroLabel = useMemo(
@@ -93,6 +106,10 @@ export function RecolectorRecoleccionCampoForm({ data, rutaNombre }: Props) {
           body: JSON.stringify({
             motivo_cancelacion: motivoCancelacion.trim() || null,
             bolsas_llenas: bolsasLlenas === "" ? null : Number.parseInt(bolsasLlenas, 10),
+            bolsas_llenas_punto:
+              bolsasLlenasPunto === "" ? null : Number.parseInt(bolsasLlenasPunto, 10),
+            bolsas_nuevas_vendidas:
+              bolsasNuevasVendidas === "" ? null : Number.parseInt(bolsasNuevasVendidas, 10),
             biotachos_llenos:
               biotachosLlenos === "" ? null : Number.parseInt(biotachosLlenos, 10),
             bolsas_nuevas: bolsasNuevas === "" ? null : Number.parseInt(bolsasNuevas, 10),
@@ -197,8 +214,32 @@ export function RecolectorRecoleccionCampoForm({ data, rutaNombre }: Props) {
               <h2 className="mb-3 text-sm font-semibold text-zinc-900 dark:text-zinc-50">
                 Retiro
               </h2>
+              {data.esEmpresaPunto && (
+                <p className="mb-3 text-xs text-violet-800 dark:text-violet-300">
+                  Empresa + Punto: el cobro se calcula con bolsas llenas punto y bolsas nuevas
+                  vendidas (Parámetros).
+                </p>
+              )}
               <div className="grid grid-cols-2 gap-3">
-                <Field label="Bolsas llenas *" value={bolsasLlenas} onChange={setBolsasLlenas} />
+                <Field
+                  label={data.esEmpresaPunto ? "Bolsas llenas hogar *" : "Bolsas llenas *"}
+                  value={bolsasLlenas}
+                  onChange={setBolsasLlenas}
+                />
+                {data.esEmpresaPunto && (
+                  <>
+                    <Field
+                      label="Bolsas llenas punto *"
+                      value={bolsasLlenasPunto}
+                      onChange={setBolsasLlenasPunto}
+                    />
+                    <Field
+                      label="Bolsas nuevas vendidas *"
+                      value={bolsasNuevasVendidas}
+                      onChange={setBolsasNuevasVendidas}
+                    />
+                  </>
+                )}
                 <Field
                   label="Biotachos llenos *"
                   value={biotachosLlenos}
@@ -221,6 +262,8 @@ export function RecolectorRecoleccionCampoForm({ data, rutaNombre }: Props) {
                 cobroDetalle={cobroDetalle}
                 precioRetiroLabel={precioRetiroLabel}
                 precioBolsaExtraLabel={data.precioBolsaExtraLabel}
+                precioBolsaPuntoLabel={data.precioBolsaPuntoLabel}
+                precioBolsaLlenaPuntoLabel={data.precioBolsaLlenaPuntoLabel}
               />
               <p className="mb-3 text-xs text-zinc-500">{cobroDetalle.ayudaCobro}</p>
               <p className="mb-3 text-xs text-zinc-500">
@@ -323,7 +366,19 @@ function RecoleccionCampoSoloLectura({
               Retiro
             </h2>
             <dl className="space-y-2 text-sm">
-              <ReadOnlyRow label="Bolsas llenas" value={data.bolsasLlenas || "0"} />
+              <ReadOnlyRow
+                label={data.esEmpresaPunto ? "Bolsas llenas hogar" : "Bolsas llenas"}
+                value={data.bolsasLlenas || "0"}
+              />
+              {data.esEmpresaPunto && (
+                <>
+                  <ReadOnlyRow label="Bolsas llenas punto" value={data.bolsasLlenasPunto || "0"} />
+                  <ReadOnlyRow
+                    label="Bolsas nuevas vendidas"
+                    value={data.bolsasNuevasVendidas || "0"}
+                  />
+                </>
+              )}
               <ReadOnlyRow label="Biotachos llenos" value={data.biotachosLlenos || "0"} />
               <ReadOnlyRow label="Bolsas nuevas" value={data.bolsasNuevas || "0"} />
               <ReadOnlyRow label="Biotachos nuevos" value={data.biotachosNuevos || "0"} />
@@ -338,6 +393,8 @@ function RecoleccionCampoSoloLectura({
               cobroDetalle={cobroDetalle}
               precioRetiroLabel={precioRetiroLabel}
               precioBolsaExtraLabel={data.precioBolsaExtraLabel}
+              precioBolsaPuntoLabel={data.precioBolsaPuntoLabel}
+              precioBolsaLlenaPuntoLabel={data.precioBolsaLlenaPuntoLabel}
             />
             <dl className="space-y-2 text-sm">
               <ReadOnlyRow label="Efectivo" value={data.montoEfectivo} />
@@ -366,14 +423,38 @@ function CobroDetalleRows({
   cobroDetalle,
   precioRetiroLabel,
   precioBolsaExtraLabel,
+  precioBolsaPuntoLabel,
+  precioBolsaLlenaPuntoLabel,
 }: {
   cobroDetalle: PrecioCobroDetalle;
   precioRetiroLabel: string;
   precioBolsaExtraLabel: string;
+  precioBolsaPuntoLabel: string;
+  precioBolsaLlenaPuntoLabel: string;
 }) {
   return (
     <dl className="mb-4 space-y-2 text-sm">
-      {cobroDetalle.regla === "empresa" ? (
+      {cobroDetalle.regla === "empresa_punto" ? (
+        <>
+          <ReadOnlyRow
+            label="Precio bolsa llena punto"
+            value={precioBolsaLlenaPuntoLabel}
+          />
+          {cobroDetalle.bolsaLlenaPuntoDetalleLabel && (
+            <ReadOnlyRow
+              label="Cargo bolsas llenas punto"
+              value={`${cobroDetalle.bolsaLlenaPuntoDetalleLabel} = ${cobroDetalle.montoBolsaLlenaPuntoLabel}`}
+            />
+          )}
+          <ReadOnlyRow label="Precio bolsa punto" value={precioBolsaPuntoLabel} />
+          {cobroDetalle.bolsaPuntoDetalleLabel && (
+            <ReadOnlyRow
+              label="Cargo bolsas nuevas vendidas"
+              value={`${cobroDetalle.bolsaPuntoDetalleLabel} = ${cobroDetalle.montoBolsaPuntoLabel}`}
+            />
+          )}
+        </>
+      ) : cobroDetalle.regla === "empresa" ? (
         <ReadOnlyRow label="Precio de retiro (planilla)" value={precioRetiroLabel} />
       ) : cobroDetalle.regla === "mixto" ? (
         <>

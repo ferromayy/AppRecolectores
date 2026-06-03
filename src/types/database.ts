@@ -332,6 +332,8 @@ export type Database = {
           monto_qr: number | null;
           motivo_cancelacion: string | null;
           bolsas_llenas: number | null;
+          bolsas_llenas_punto: number | null;
+          bolsas_nuevas_vendidas: number | null;
           biotachos_llenos: number | null;
           bolsas_nuevas: number | null;
           biotachos_nuevos: number | null;
@@ -376,6 +378,8 @@ export type Database = {
           monto_qr?: number | null;
           motivo_cancelacion?: string | null;
           bolsas_llenas?: number | null;
+          bolsas_llenas_punto?: number | null;
+          bolsas_nuevas_vendidas?: number | null;
           biotachos_llenos?: number | null;
           bolsas_nuevas?: number | null;
           biotachos_nuevos?: number | null;
@@ -420,6 +424,8 @@ export type Database = {
           monto_qr?: number | null;
           motivo_cancelacion?: string | null;
           bolsas_llenas?: number | null;
+          bolsas_llenas_punto?: number | null;
+          bolsas_nuevas_vendidas?: number | null;
           biotachos_llenos?: number | null;
           bolsas_nuevas?: number | null;
           biotachos_nuevos?: number | null;

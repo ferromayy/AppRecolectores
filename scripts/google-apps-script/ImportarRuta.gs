@@ -33,7 +33,7 @@ const CONFIG = {
     MENSAJE: "MensajeSistema",
   },
   UNIDADES: ["Hogar", "Empresa", "Puntos"],
-  TIPOS_SERVICIO: ["Reciclaje", "Mixto", "Organico"],
+  TIPOS_SERVICIO: ["Reciclaje", "Mixto", "Organico", "Punto"],
   FRECUENCIAS: ["Mensual", "Puntual", "Semanal"],
   COLOR_PENDIENTE: "#FFF9C4",
   COLOR_INCOMPLETO: "#FFCDD2",
@@ -317,7 +317,7 @@ function getCols_(map) {
     zona: colIndex_(map, [CONFIG.COL.ZONA]),
     nombre: colIndex_(map, [CONFIG.COL.NOMBRE]),
     unidad: colIndex_(map, [CONFIG.COL.UNIDAD]),
-    tipo: colIndex_(map, [CONFIG.COL.TIPO_SERVICIO, "Tipo de servicio"]),
+    tipo: colIndex_(map, [CONFIG.COL.TIPO_SERVICIO, "Tipo de servicio", "Tipo de cliente"]),
     frecuencia: colIndex_(map, [CONFIG.COL.FRECUENCIA]),
     barrio: colIndex_(map, [CONFIG.COL.BARRIO]),
     direccion: colIndex_(map, [CONFIG.COL.DIRECCION, "Dirección"]),
@@ -392,7 +392,7 @@ function validarFila_(row, recolectoresMap) {
   if (zona && zona.length > 10) addErr_(errors, errorFields, "zona", "Zona (muy largo (>10))");
 
   validarEnum_(row.unidad, CONFIG.UNIDADES, 100, "Unidad", errors, errorFields, "unidad");
-  validarEnum_(row.tipo_servicio, CONFIG.TIPOS_SERVICIO, 50, "Tipo de servicio", errors, errorFields, "tipo");
+  validarTipoServicio_(row.tipo_servicio, errors, errorFields);
   validarEnum_(row.frecuencia, CONFIG.FRECUENCIAS, 50, "Frecuencia", errors, errorFields, "frecuencia");
 
   const barrio = String(row.barrio || "").trim();
@@ -446,7 +446,7 @@ function validarFila_(row, recolectoresMap) {
       zona: zona || null,
       nombre: nombre,
       unidad: matchEnum_(String(row.unidad || "").trim(), CONFIG.UNIDADES),
-      tipo_servicio: matchEnum_(String(row.tipo_servicio || "").trim(), CONFIG.TIPOS_SERVICIO),
+      tipo_servicio: parseTipoServicio_(String(row.tipo_servicio || "").trim()),
       frecuencia: matchEnum_(String(row.frecuencia || "").trim(), CONFIG.FRECUENCIAS),
       barrio: barrio || null,
       direccion: direccion,
@@ -482,6 +482,34 @@ function validarEnum_(value, allowed, maxLen, label, errors, errorFields, field)
   if (!v) return;
   if (v.length > maxLen) addErr_(errors, errorFields, field, label + " (muy largo (>" + maxLen + "))");
   if (!matchEnum_(v, allowed)) addErr_(errors, errorFields, field, label + " (valor inválido)");
+}
+
+/** Unidad = Puntos; tipo de servicio = Punto (no confundir). */
+function validarTipoServicio_(value, errors, errorFields) {
+  const raw = String(value || "").trim();
+  if (!raw) return;
+  if (raw.length > 50) addErr_(errors, errorFields, "tipo", "Tipo de servicio (muy largo (>50))");
+  if (!parseTipoServicio_(raw)) {
+    addErr_(
+      errors,
+      errorFields,
+      "tipo",
+      'Tipo de servicio (valor inválido: "' +
+        raw +
+        '"; use Reciclaje, Mixto, Organico o Punto)',
+    );
+  }
+}
+
+function parseTipoServicio_(value) {
+  const v = String(value || "")
+    .trim()
+    .normalize("NFD")
+    .replace(/[\u0300-\u036f]/g, "");
+  if (!v) return null;
+  const lower = v.toLowerCase();
+  if (lower === "punto" || lower === "puntos") return "Punto";
+  return matchEnum_(v, CONFIG.TIPOS_SERVICIO);
 }
 
 function matchEnum_(value, allowed) {

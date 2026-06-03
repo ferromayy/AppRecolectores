@@ -37,7 +37,7 @@ Zona | Nombre | Unidad | Tipo de servicio | Frecuencia | Barrio | Direccion | De
 | Campo | Valores |
 |-------|---------|
 | Unidad | Hogar, Empresa, Puntos |
-| Tipo de servicio | Reciclaje, Mixto, Organico |
+| Tipo de servicio | Reciclaje, Mixto, Organico, **Punto** (con Unidad **Empresa** → cobro especial en app). No usar **Puntos** aquí: es valor de **Unidad**, no de tipo |
 | Frecuencia | Mensual, Puntual, Semanal |
 
 ### Estado (automático — no editar)

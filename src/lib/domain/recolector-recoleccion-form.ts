@@ -6,7 +6,10 @@ import {
   recolectorPuedeEditarRecoleccion,
 } from "@/lib/domain/recolector-recoleccion-campo";
 import { RECOLECCION_OPERATIVA_LABELS } from "@/lib/domain/constants";
-import { formatParametroMoney } from "@/lib/domain/sistema-parametros";
+import {
+  formatParametroMoney,
+  isEmpresaPuntoCobro,
+} from "@/lib/domain/sistema-parametros";
 
 type RecoleccionRow = Database["public"]["Tables"]["ruta_recolecciones"]["Row"];
 
@@ -18,6 +21,7 @@ export type RecoleccionCampoFormData = {
   nombre: string;
   unidad: string | null;
   tipoServicio: string | null;
+  esEmpresaPunto: boolean;
   horaProgramada: string;
   observaciones: string | null;
   precioRetiro: number;
@@ -26,9 +30,15 @@ export type RecoleccionCampoFormData = {
   precioBolsaExtraLabel: string;
   precioRetiroReciclableMixto: number;
   precioRetiroReciclableMixtoLabel: string;
+  precioBolsaPunto: number;
+  precioBolsaPuntoLabel: string;
+  precioBolsaLlenaPunto: number;
+  precioBolsaLlenaPuntoLabel: string;
   estadoLabel: string;
   motivoCancelacion: string;
   bolsasLlenas: string;
+  bolsasLlenasPunto: string;
+  bolsasNuevasVendidas: string;
   biotachosLlenos: string;
   bolsasNuevas: string;
   biotachosNuevos: string;
@@ -44,12 +54,18 @@ export type RecoleccionCampoFormData = {
 export function buildRecoleccionCampoFormData(
   rutaId: string,
   item: RecoleccionRow,
-  precios: { bolsaExtra: number; retiroReciclableMixto: number },
+  precios: {
+    bolsaExtra: number;
+    retiroReciclableMixto: number;
+    bolsaPunto: number;
+    bolsaLlenaPunto: number;
+  },
   estadoRuta: RutaEstado = "en_curso",
 ): RecoleccionCampoFormData {
   const precioRetiro = parsePrecioRetiro(item.precio);
   const completada = recoleccionCerradaParaRecolector(item.estado_operativo);
   const soloLectura = !recolectorPuedeEditarRecoleccion(item.estado_operativo, estadoRuta);
+  const esEmpresaPunto = isEmpresaPuntoCobro(item.unidad, item.tipo_servicio);
 
   return {
     id: item.id,
@@ -59,6 +75,7 @@ export function buildRecoleccionCampoFormData(
     nombre: item.nombre,
     unidad: item.unidad,
     tipoServicio: item.tipo_servicio,
+    esEmpresaPunto,
     horaProgramada: String(item.hora).slice(0, 5),
     observaciones: item.observaciones,
     precioRetiro,
@@ -67,9 +84,17 @@ export function buildRecoleccionCampoFormData(
     precioBolsaExtraLabel: formatParametroMoney(precios.bolsaExtra),
     precioRetiroReciclableMixto: precios.retiroReciclableMixto,
     precioRetiroReciclableMixtoLabel: formatParametroMoney(precios.retiroReciclableMixto),
+    precioBolsaPunto: precios.bolsaPunto,
+    precioBolsaPuntoLabel: formatParametroMoney(precios.bolsaPunto),
+    precioBolsaLlenaPunto: precios.bolsaLlenaPunto,
+    precioBolsaLlenaPuntoLabel: formatParametroMoney(precios.bolsaLlenaPunto),
     estadoLabel: RECOLECCION_OPERATIVA_LABELS[item.estado_operativo],
     motivoCancelacion: item.motivo_cancelacion ?? item.detalle ?? "",
     bolsasLlenas: item.bolsas_llenas != null ? String(item.bolsas_llenas) : "",
+    bolsasLlenasPunto:
+      item.bolsas_llenas_punto != null ? String(item.bolsas_llenas_punto) : "",
+    bolsasNuevasVendidas:
+      item.bolsas_nuevas_vendidas != null ? String(item.bolsas_nuevas_vendidas) : "",
     biotachosLlenos: item.biotachos_llenos != null ? String(item.biotachos_llenos) : "",
     bolsasNuevas: item.bolsas_nuevas != null ? String(item.bolsas_nuevas) : "",
     biotachosNuevos: item.biotachos_nuevos != null ? String(item.biotachos_nuevos) : "",

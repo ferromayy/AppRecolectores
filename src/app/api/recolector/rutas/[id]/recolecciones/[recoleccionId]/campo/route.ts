@@ -3,6 +3,8 @@ import { NextResponse } from "next/server";
 import { requireAuth } from "@/lib/auth/session";
 import {
   fetchPrecioBolsaExtraActivo,
+  fetchPrecioBolsaLlenaPuntoActivo,
+  fetchPrecioBolsaPuntoActivo,
   fetchPrecioRetiroReciclableMixtoActivo,
 } from "@/lib/data/sistema-parametros";
 import {
@@ -106,16 +108,21 @@ export async function PATCH(request: Request, { params }: Props) {
   }
 
   const precioRetiro = parsePrecioRetiro(recoleccion.precio);
-  const [precioBolsaExtra, precioRetiroReciclableMixto] = await Promise.all([
-    fetchPrecioBolsaExtraActivo(),
-    fetchPrecioRetiroReciclableMixtoActivo(),
-  ]);
+  const [precioBolsaExtra, precioRetiroReciclableMixto, precioBolsaPunto, precioBolsaLlenaPunto] =
+    await Promise.all([
+      fetchPrecioBolsaExtraActivo(),
+      fetchPrecioRetiroReciclableMixtoActivo(),
+      fetchPrecioBolsaPuntoActivo(),
+      fetchPrecioBolsaLlenaPuntoActivo(),
+    ]);
   const parsed = parseRecoleccionCampoBody(body, {
     unidad: recoleccion.unidad,
     tipoServicio: recoleccion.tipo_servicio,
     precioRetiro,
     precioBolsaExtra,
     precioRetiroReciclableMixto,
+    precioBolsaPunto,
+    precioBolsaLlenaPunto,
   });
   if (!parsed.ok) {
     return NextResponse.json({ ok: false, error: parsed.error }, { status: 400 });
@@ -137,11 +144,15 @@ export async function PATCH(request: Request, { params }: Props) {
     updateRow.monto_transferencia = null;
     updateRow.monto_qr = null;
     updateRow.bolsas_llenas = null;
+    updateRow.bolsas_llenas_punto = null;
+    updateRow.bolsas_nuevas_vendidas = null;
     updateRow.biotachos_llenos = null;
     updateRow.bolsas_nuevas = null;
     updateRow.biotachos_nuevos = null;
   } else {
     updateRow.bolsas_llenas = parsed.data.bolsas_llenas;
+    updateRow.bolsas_llenas_punto = parsed.data.bolsas_llenas_punto;
+    updateRow.bolsas_nuevas_vendidas = parsed.data.bolsas_nuevas_vendidas;
     updateRow.biotachos_llenos = parsed.data.biotachos_llenos;
     updateRow.bolsas_nuevas = parsed.data.bolsas_nuevas;
     updateRow.biotachos_nuevos = parsed.data.biotachos_nuevos;

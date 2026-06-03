@@ -1,5 +1,5 @@
 export const UNIDADES = ["Hogar", "Empresa", "Puntos"] as const;
-export const TIPOS_SERVICIO = ["Reciclaje", "Mixto", "Organico"] as const;
+export const TIPOS_SERVICIO = ["Reciclaje", "Mixto", "Organico", "Punto"] as const;
 export const FRECUENCIAS = ["Mensual", "Puntual", "Semanal"] as const;
 export const ESTADOS_HOJA = ["Pendiente", "Incompleto", "Error", "Enviada"] as const;
 
@@ -84,10 +84,26 @@ function normalizeHeader(value: string): string {
     .replace(/\*/g, "");
 }
 
+function foldAccents(value: string): string {
+  return value
+    .normalize("NFD")
+    .replace(/[\u0300-\u036f]/g, "");
+}
+
 function matchEnum<T extends string>(value: string, allowed: readonly T[]): T | null {
   if (!value) return null;
-  const found = allowed.find((a) => a.toLowerCase() === value.toLowerCase());
+  const folded = foldAccents(value);
+  const found = allowed.find((a) => a.toLowerCase() === folded.toLowerCase());
   return found ?? null;
+}
+
+/** Acepta alias habituales de la planilla (p. ej. "Puntos" en columna tipo → Punto). */
+export function parseTipoServicio(raw: string): TipoServicio | null {
+  const v = foldAccents(str(raw));
+  if (!v) return null;
+  const lower = v.toLowerCase();
+  if (lower === "punto" || lower === "puntos") return "Punto";
+  return matchEnum(v, TIPOS_SERVICIO);
 }
 
 export function normalizeArgPhone(raw: string): { ok: true; value: string } | { ok: false; error: string } {
@@ -227,9 +243,13 @@ export function validateRecoleccionRow(
   let tipo_servicio: string | null = null;
   if (tipoRaw) {
     checkLength("tipo_servicio", "Tipo de servicio", tipoRaw, 50, errors);
-    const matched = matchEnum(tipoRaw, TIPOS_SERVICIO);
-    if (!matched) errors.push({ field: "tipo_servicio", message: "Tipo de servicio (valor inválido)" });
-    else tipo_servicio = matched;
+    const matched = parseTipoServicio(tipoRaw);
+    if (!matched) {
+      errors.push({
+        field: "tipo_servicio",
+        message: `Tipo de servicio (valor inválido: "${tipoRaw}"; use Reciclaje, Mixto, Organico o Punto)`,
+      });
+    } else tipo_servicio = matched;
   }
 
   const freqRaw = str(row.frecuencia);
@@ -355,7 +375,9 @@ export const SHEET_COLUMN_MAP: Record<string, keyof RecoleccionSheetRow> = {
   nombre: "nombre",
   unidad: "unidad",
   "tipo de servicio": "tipo_servicio",
+  "tipo de cliente": "tipo_servicio",
   tipodeservicio: "tipo_servicio",
+  tipodecliente: "tipo_servicio",
   frecuencia: "frecuencia",
   barrio: "barrio",
   direccion: "direccion",

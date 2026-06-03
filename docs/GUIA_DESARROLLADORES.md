@@ -370,9 +370,12 @@ Resolución de regla (`resolvePrecioCobroRegla`): **Empresa** gana sobre Mixto s
 
 | Regla | Condición | Total |
 |-------|-----------|-------|
-| `empresa` | `unidad === "Empresa"` (case-insensitive) | `precioRetiro` |
+| `empresa_punto` | `unidad === "Empresa"` y `tipo_servicio` Punto/Puntos | `bolsasLlenasPunto × precioBolsaLlenaPunto + bolsasNuevasVendidas × precioBolsaPunto` |
+| `empresa` | `unidad === "Empresa"` (sin Punto) | `precioRetiro` |
 | `mixto` | `tipo_servicio === "Mixto"` | `0 bolsas` → `precioRetiro`; `1–2` → `precioRetiroReciclableMixto`; `3+` → mixto + `bolsaExtra × (bolsas−2)` |
 | `estandar` | resto | `precioRetiro + bolsaExtra × max(0, bolsas−2)` |
+
+Columnas DB (`20260603120000_recoleccion_empresa_punto_campos.sql`): `bolsas_llenas_punto`, `bolsas_nuevas_vendidas`. `bolsas_llenas` = hogar en UI Empresa+Punto.
 
 Implementación: `calcPrecioTotalCobrarConReglas`, `buildPrecioCobroDetalle` en `sistema-parametros.ts`.
 
@@ -383,7 +386,7 @@ Consumidores:
 - Página: `mis-rutas/.../recoleccionId/page.tsx` — fetch `fetchPrecioBolsaExtraActivo` + `fetchPrecioRetiroReciclableMixtoActivo`
 - PATCH: `api/recolector/.../campo/route.ts` — mismos precios en servidor
 
-Enums de planilla (`sheet-recoleccion-validation.ts`): `UNIDADES` = Hogar, Empresa, Puntos; `TIPOS_SERVICIO` = Reciclaje, Mixto, Organico.
+Enums de planilla (`sheet-recoleccion-validation.ts`): `UNIDADES` = Hogar, Empresa, Puntos; `TIPOS_SERVICIO` = Reciclaje, Mixto, Organico, Punto.
 
 ### Panel recolector
 

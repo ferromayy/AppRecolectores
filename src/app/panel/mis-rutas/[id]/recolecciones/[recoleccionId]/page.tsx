@@ -5,6 +5,8 @@ import { RecolectorRecoleccionCampoForm } from "@/components/panel/recolector/re
 import { requireAuth } from "@/lib/auth/session";
 import {
   fetchPrecioBolsaExtraActivo,
+  fetchPrecioBolsaLlenaPuntoActivo,
+  fetchPrecioBolsaPuntoActivo,
   fetchPrecioRetiroReciclableMixtoActivo,
 } from "@/lib/data/sistema-parametros";
 import { buildRecoleccionCampoFormData } from "@/lib/domain/recolector-recoleccion-form";
@@ -81,14 +83,22 @@ export default async function RecolectorRecoleccionCampoPage({ params }: Props) 
 
   if (!recoleccion) notFound();
 
-  const [precioBolsaExtra, precioRetiroReciclableMixto] = await Promise.all([
-    fetchPrecioBolsaExtraActivo(),
-    fetchPrecioRetiroReciclableMixtoActivo(),
-  ]);
+  const [precioBolsaExtra, precioRetiroReciclableMixto, precioBolsaPunto, precioBolsaLlenaPunto] =
+    await Promise.all([
+      fetchPrecioBolsaExtraActivo(),
+      fetchPrecioRetiroReciclableMixtoActivo(),
+      fetchPrecioBolsaPuntoActivo(),
+      fetchPrecioBolsaLlenaPuntoActivo(),
+    ]);
   const formData = buildRecoleccionCampoFormData(
     rutaId,
     recoleccion,
-    { bolsaExtra: precioBolsaExtra, retiroReciclableMixto: precioRetiroReciclableMixto },
+    {
+      bolsaExtra: precioBolsaExtra,
+      retiroReciclableMixto: precioRetiroReciclableMixto,
+      bolsaPunto: precioBolsaPunto,
+      bolsaLlenaPunto: precioBolsaLlenaPunto,
+    },
     ruta.estado,
   );
 
