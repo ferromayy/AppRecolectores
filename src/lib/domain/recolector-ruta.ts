@@ -5,6 +5,7 @@ import {
 } from "@/lib/domain/constants";
 import { formatRutaFecha } from "@/lib/domain/rutas";
 import { evaluarFinalizarRuta } from "@/lib/domain/recolector-finalizar-ruta";
+import { recoleccionCerradaParaRecolector } from "@/lib/domain/recolector-recoleccion-campo";
 import type { Database, RutaEstado, RutaTurno } from "@/types/database";
 
 type RutaRow = Database["public"]["Tables"]["rutas"]["Row"];
@@ -51,6 +52,8 @@ export type RecolectorRecoleccionPreview = {
   orden: number;
   nombre: string;
   direccion: string;
+  latitud: number | null;
+  longitud: number | null;
   hora: string;
   estadoLabel: string;
   estado: RecoleccionRow["estado_operativo"];
@@ -177,6 +180,8 @@ export function buildRecolectorRecoleccionPreview(
     orden: item.orden,
     nombre: item.nombre,
     direccion: item.direccion,
+    latitud: item.latitud,
+    longitud: item.longitud,
     hora: String(item.hora).slice(0, 5),
     estado: item.estado_operativo,
     estadoLabel: RECOLECCION_OPERATIVA_LABELS[item.estado_operativo],
@@ -205,12 +210,25 @@ export function buildRecolectorRecoleccionDetalle(
   };
 }
 
+/**
+ * Direcciones para el botón Maps de la ruta: solo paradas pendientes a partir de la
+ * primera posterior (en orden) a la última visitada, cancelada u omitida.
+ */
 export function buildDireccionesMapsActivas(
   recolecciones: Pick<RecoleccionRow, "direccion" | "estado_operativo">[],
 ): string[] {
+  let startIndex = 0;
+  for (let i = 0; i < recolecciones.length; i++) {
+    if (recoleccionCerradaParaRecolector(recolecciones[i].estado_operativo)) {
+      startIndex = i + 1;
+    }
+  }
+
   return recolecciones
-    .filter((item) => item.estado_operativo !== "visitada")
-    .map((item) => item.direccion);
+    .slice(startIndex)
+    .filter((item) => !recoleccionCerradaParaRecolector(item.estado_operativo))
+    .map((item) => item.direccion.trim())
+    .filter(Boolean);
 }
 
 export function buildGoogleMapsDirectionsUrl(addresses: string[]): string | null {
@@ -218,11 +236,25 @@ export function buildGoogleMapsDirectionsUrl(addresses: string[]): string | null
   if (cleaned.length === 0) return null;
 
   if (cleaned.length === 1) {
-    return `https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(cleaned[0])}`;
+    return buildGoogleMapsRecoleccionUrl({ direccion: cleaned[0], latitud: null, longitud: null });
   }
 
   const path = cleaned.map((a) => encodeURIComponent(a)).join("/");
   return `https://www.google.com/maps/dir/${path}`;
+}
+
+/** Ubicación de una parada (coordenadas o búsqueda por dirección). */
+export function buildGoogleMapsRecoleccionUrl(
+  item: Pick<RecolectorRecoleccionPreview, "direccion" | "latitud" | "longitud">,
+): string | null {
+  if (item.latitud != null && item.longitud != null) {
+    return `https://www.google.com/maps?q=${item.latitud},${item.longitud}`;
+  }
+
+  const direccion = item.direccion.trim();
+  if (!direccion) return null;
+
+  return `https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(direccion)}`;
 }
 
 export function formatInicioJornada(value: string | null): string {

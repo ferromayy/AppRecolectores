@@ -370,12 +370,12 @@ Resolución de regla (`resolvePrecioCobroRegla`): **Empresa** gana sobre Mixto s
 
 | Regla | Condición | Total |
 |-------|-----------|-------|
-| `empresa_punto` | `unidad === "Empresa"` y `tipo_servicio` Punto/Puntos | `bolsasLlenasPunto × precioBolsaLlenaPunto + bolsasNuevasVendidas × precioBolsaPunto` |
+| `empresa_punto` | `unidad === "Empresa"` y `tipo_servicio` Punto/Puntos | `bolsasLlenas × precioBolsaLlenaPunto + bolsasNuevasVendidas × precioBolsaPunto` (`bolsasLlenasPunto` no entra al total) |
 | `empresa` | `unidad === "Empresa"` (sin Punto) | `precioRetiro` |
 | `mixto` | `tipo_servicio === "Mixto"` | `0 bolsas` → `precioRetiro`; `1–2` → `precioRetiroReciclableMixto`; `3+` → mixto + `bolsaExtra × (bolsas−2)` |
 | `estandar` | resto | `precioRetiro + bolsaExtra × max(0, bolsas−2)` |
 
-Columnas DB (`20260603120000_recoleccion_empresa_punto_campos.sql`): `bolsas_llenas_punto`, `bolsas_nuevas_vendidas`. `bolsas_llenas` = hogar en UI Empresa+Punto.
+Columnas DB (`20260603120000_recoleccion_empresa_punto_campos.sql`): `bolsas_llenas_punto` (solo registro), `bolsas_nuevas_vendidas`. Cobro automático usa `bolsas_llenas` (hogar).
 
 Implementación: `calcPrecioTotalCobrarConReglas`, `buildPrecioCobroDetalle` en `sistema-parametros.ts`.
 

@@ -216,8 +216,9 @@ export function RecolectorRecoleccionCampoForm({ data, rutaNombre }: Props) {
               </h2>
               {data.esEmpresaPunto && (
                 <p className="mb-3 text-xs text-violet-800 dark:text-violet-300">
-                  Empresa + Punto: el cobro se calcula con bolsas llenas punto y bolsas nuevas
-                  vendidas (Parámetros).
+                  Empresa + Punto: el total automático usa bolsas llenas hogar y bolsas nuevas
+                  vendidas (Parámetros). Bolsas llenas punto: solo cantidad; el monto en punto va
+                  en los pagos.
                 </p>
               )}
               <div className="grid grid-cols-2 gap-3">
@@ -229,7 +230,7 @@ export function RecolectorRecoleccionCampoForm({ data, rutaNombre }: Props) {
                 {data.esEmpresaPunto && (
                   <>
                     <Field
-                      label="Bolsas llenas punto *"
+                      label="Bolsas llenas punto (solo cantidad) *"
                       value={bolsasLlenasPunto}
                       onChange={setBolsasLlenasPunto}
                     />
@@ -437,12 +438,12 @@ function CobroDetalleRows({
       {cobroDetalle.regla === "empresa_punto" ? (
         <>
           <ReadOnlyRow
-            label="Precio bolsa llena punto"
+            label="Precio bolsa llena hogar"
             value={precioBolsaLlenaPuntoLabel}
           />
           {cobroDetalle.bolsaLlenaPuntoDetalleLabel && (
             <ReadOnlyRow
-              label="Cargo bolsas llenas punto"
+              label="Cargo bolsas llenas hogar"
               value={`${cobroDetalle.bolsaLlenaPuntoDetalleLabel} = ${cobroDetalle.montoBolsaLlenaPuntoLabel}`}
             />
           )}

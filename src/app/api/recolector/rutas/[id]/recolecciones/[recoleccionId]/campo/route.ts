@@ -171,7 +171,7 @@ export async function PATCH(request: Request, { params }: Props) {
   if (updateError) {
     const message = updateError.message.includes("schema cache") ||
       updateError.message.includes("does not exist")
-      ? "Faltan columnas en Supabase. Ejecutá el SQL de supabase/migrations/20260524140000_fix_missing_operativo_columns.sql en el SQL Editor y volvé a intentar."
+      ? "Faltan columnas en Supabase. Ejecutá: node scripts/apply-pending-migrations.mjs (con SUPABASE_DB_URL) o pegá el SQL que imprime en Supabase → SQL Editor. Incluye migraciones hasta 20260603120000_recoleccion_empresa_punto_campos.sql."
       : updateError.message;
     return NextResponse.json({ ok: false, error: message }, { status: 500 });
   }

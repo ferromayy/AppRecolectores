@@ -7,6 +7,7 @@ import { useMemo, useState } from "react";
 import { RecolectorRecoleccionSheet } from "@/components/panel/recolector/recolector-recoleccion-sheet";
 import {
   buildGoogleMapsDirectionsUrl,
+  buildGoogleMapsRecoleccionUrl,
   formatInicioJornada,
   formatKm,
   formatRecolectorMoney,
@@ -16,9 +17,14 @@ import {
 } from "@/lib/domain/recolector-ruta";
 import { recoleccionCerradaParaRecolector } from "@/lib/domain/recolector-recoleccion-campo";
 import { mensajeBloqueoSuspension } from "@/lib/domain/ruta-estado-transiciones";
+import {
+  buildWhatsAppAvisosRecolecciones,
+  type WhatsAppAvisoRecoleccion,
+} from "@/lib/whatsapp";
 
 type Props = {
   ruta: RecolectorRutaDetalle;
+  recolectorNombre: string;
   recoleccionesPreview: RecolectorRecoleccionPreview[];
   recoleccionesDetalle: RecolectorRecoleccionDetalle[];
   direccionesMaps: string[];
@@ -34,6 +40,7 @@ const ESTADO_BADGE: Record<string, string> = {
 
 export function RecolectorRutaDetalle({
   ruta,
+  recolectorNombre,
   recoleccionesPreview,
   recoleccionesDetalle,
   direccionesMaps,
@@ -42,13 +49,38 @@ export function RecolectorRutaDetalle({
   const [error, setError] = useState<string | null>(null);
   const [selectedId, setSelectedId] = useState<string | null>(null);
   const [finalizando, setFinalizando] = useState(false);
+  const [avisoWhatsapp, setAvisoWhatsapp] = useState<{
+    items: WhatsAppAvisoRecoleccion[];
+    index: number;
+  } | null>(null);
 
   const mapsUrl = useMemo(
     () => buildGoogleMapsDirectionsUrl(direccionesMaps),
     [direccionesMaps],
   );
 
+  const avisosWhatsapp = useMemo(
+    () => buildWhatsAppAvisosRecolecciones(recoleccionesDetalle, recolectorNombre),
+    [recoleccionesDetalle, recolectorNombre],
+  );
+
   const selectedRecoleccion = recoleccionesDetalle.find((item) => item.id === selectedId) ?? null;
+
+  const whatsappTodosDisabled =
+    ruta.rutaSuspendida ||
+    !ruta.rutaIniciada ||
+    ruta.rutaFinalizada ||
+    avisosWhatsapp.length === 0;
+
+  const motivoWhatsappTodos = ruta.rutaSuspendida
+    ? mensajeBloqueoSuspension()
+    : !ruta.rutaIniciada
+      ? "Iniciá la ruta para avisar a los clientes"
+      : ruta.rutaFinalizada
+        ? "La ruta ya está finalizada"
+        : avisosWhatsapp.length === 0
+          ? "Ninguna parada tiene teléfono cargado"
+          : null;
 
   function handleMaps() {
     if (!mapsUrl) {
@@ -56,6 +88,44 @@ export function RecolectorRutaDetalle({
       return;
     }
     window.open(mapsUrl, "_blank", "noopener,noreferrer");
+  }
+
+  function openWhatsAppAviso(url: string) {
+    window.open(url, "_blank", "noopener,noreferrer");
+  }
+
+  function handleWhatsAppTodos() {
+    if (whatsappTodosDisabled) {
+      setError(motivoWhatsappTodos ?? "No se puede avisar por WhatsApp");
+      return;
+    }
+
+    setError(null);
+    if (avisosWhatsapp.length === 1) {
+      openWhatsAppAviso(avisosWhatsapp[0].url);
+      return;
+    }
+
+    setAvisoWhatsapp({ items: avisosWhatsapp, index: 0 });
+    openWhatsAppAviso(avisosWhatsapp[0].url);
+  }
+
+  function handleSiguienteAvisoWhatsapp() {
+    if (!avisoWhatsapp) return;
+
+    const nextIndex = avisoWhatsapp.index + 1;
+    if (nextIndex >= avisoWhatsapp.items.length) {
+      setAvisoWhatsapp(null);
+      return;
+    }
+
+    const next = avisoWhatsapp.items[nextIndex];
+    setAvisoWhatsapp({ items: avisoWhatsapp.items, index: nextIndex });
+    openWhatsAppAviso(next.url);
+  }
+
+  function handleCancelarAvisoWhatsapp() {
+    setAvisoWhatsapp(null);
   }
 
   async function handleFinalizarRuta() {
@@ -145,7 +215,7 @@ export function RecolectorRutaDetalle({
         {ruta.puedeIniciar ? (
           <Link
             href={`/panel/mis-rutas/${ruta.id}/iniciar`}
-            className="flex min-h-[3.25rem] flex-col items-center justify-center rounded-2xl bg-emerald-700 px-3 text-center text-sm font-semibold text-white active:bg-emerald-800"
+            className="col-span-2 flex min-h-[3.25rem] flex-col items-center justify-center rounded-2xl bg-emerald-700 px-3 text-center text-sm font-semibold text-white active:bg-emerald-800"
           >
             Inicio de ruta
           </Link>
@@ -153,7 +223,7 @@ export function RecolectorRutaDetalle({
           <button
             type="button"
             disabled
-            className="flex min-h-[3.25rem] flex-col items-center justify-center rounded-2xl bg-emerald-700 px-3 text-center text-sm font-semibold text-white opacity-50"
+            className="col-span-2 flex min-h-[3.25rem] flex-col items-center justify-center rounded-2xl bg-emerald-700 px-3 text-center text-sm font-semibold text-white opacity-50"
           >
             {ruta.rutaSuspendida
               ? "Ruta suspendida"
@@ -170,7 +240,46 @@ export function RecolectorRutaDetalle({
         >
           Maps
         </button>
+        <button
+          type="button"
+          onClick={handleWhatsAppTodos}
+          disabled={whatsappTodosDisabled}
+          title={motivoWhatsappTodos ?? `Avisar ${avisosWhatsapp.length} cliente(s) por WhatsApp`}
+          className="flex min-h-[3.25rem] flex-col items-center justify-center rounded-2xl bg-[#25D366] px-3 text-center text-sm font-semibold text-white active:bg-[#1da851] disabled:cursor-not-allowed disabled:opacity-50"
+        >
+          Avisar
+        </button>
       </div>
+
+      {avisoWhatsapp && (
+        <div className="rounded-2xl border border-[#25D366]/40 bg-[#25D366]/10 p-4 dark:border-[#25D366]/30 dark:bg-[#25D366]/15">
+          <p className="text-sm font-medium text-zinc-900 dark:text-zinc-50">
+            Parada {avisoWhatsapp.index + 1} de {avisoWhatsapp.items.length}:{" "}
+            {avisoWhatsapp.items[avisoWhatsapp.index].nombre}
+          </p>
+          <p className="mt-1 text-xs text-zinc-600 dark:text-zinc-400">
+            Enviá el mensaje en WhatsApp y tocá Siguiente para la próxima parada.
+          </p>
+          <div className="mt-3 grid grid-cols-2 gap-2">
+            <button
+              type="button"
+              onClick={handleCancelarAvisoWhatsapp}
+              className="min-h-[2.75rem] rounded-xl border border-zinc-200 text-sm font-medium text-zinc-700 active:bg-zinc-50 dark:border-zinc-700 dark:text-zinc-200 dark:active:bg-zinc-800"
+            >
+              Terminar
+            </button>
+            <button
+              type="button"
+              onClick={handleSiguienteAvisoWhatsapp}
+              className="min-h-[2.75rem] rounded-xl bg-[#25D366] text-sm font-semibold text-white active:bg-[#1da851]"
+            >
+              {avisoWhatsapp.index + 1 >= avisoWhatsapp.items.length
+                ? "Listo"
+                : "Siguiente"}
+            </button>
+          </div>
+        </div>
+      )}
 
       <section className="space-y-3">
         <div className="flex items-center justify-between gap-3">
@@ -197,74 +306,82 @@ export function RecolectorRutaDetalle({
                 : recoleccionCerrada
                   ? "Ver carga →"
                   : "Cargar en campo →";
-              const cardContent = (
-                <>
-                  <div className="flex gap-3">
-                    <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-emerald-100 text-sm font-bold text-emerald-800 dark:bg-emerald-950 dark:text-emerald-300">
-                      {item.orden}
-                    </span>
-                    <div className="min-w-0 flex-1">
-                      <div className="flex items-start justify-between gap-2">
-                        <p className="truncate font-semibold text-zinc-900 dark:text-zinc-50">
-                          {item.nombre}
-                        </p>
-                        <span className="shrink-0 text-xs text-zinc-500">{item.hora}</span>
-                      </div>
-                      <p className="mt-1 line-clamp-2 text-sm text-zinc-600 dark:text-zinc-400">
-                        {item.direccion}
+              const cardShellClass =
+                "w-full rounded-2xl border border-zinc-200 bg-white text-left shadow-sm dark:border-zinc-800 dark:bg-zinc-900";
+              const cardMain = (
+                <div className="flex gap-3">
+                  <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-emerald-100 text-sm font-bold text-emerald-800 dark:bg-emerald-950 dark:text-emerald-300">
+                    {item.orden}
+                  </span>
+                  <div className="min-w-0 flex-1">
+                    <div className="flex items-start justify-between gap-2">
+                      <p className="truncate font-semibold text-zinc-900 dark:text-zinc-50">
+                        {item.nombre}
                       </p>
-                      <div className="mt-2 flex flex-wrap items-center gap-2">
-                        <span
-                          className={`rounded-full px-2 py-0.5 text-xs ${
-                            recoleccionCerrada
-                              ? "bg-emerald-100 text-emerald-800 dark:bg-emerald-950 dark:text-emerald-300"
-                              : "bg-zinc-100 text-zinc-700 dark:bg-zinc-800 dark:text-zinc-300"
-                          }`}
-                        >
-                          {item.estadoLabel}
+                      <span className="shrink-0 text-xs text-zinc-500">{item.hora}</span>
+                    </div>
+                    <p className="mt-1 line-clamp-2 text-sm text-zinc-600 dark:text-zinc-400">
+                      {item.direccion}
+                    </p>
+                    <div className="mt-2 flex flex-wrap items-center gap-2">
+                      <span
+                        className={`rounded-full px-2 py-0.5 text-xs ${
+                          recoleccionCerrada
+                            ? "bg-emerald-100 text-emerald-800 dark:bg-emerald-950 dark:text-emerald-300"
+                            : "bg-zinc-100 text-zinc-700 dark:bg-zinc-800 dark:text-zinc-300"
+                        }`}
+                      >
+                        {item.estadoLabel}
+                      </span>
+                      {item.zona && (
+                        <span className="rounded-full bg-emerald-50 px-2 py-0.5 text-xs text-emerald-800 dark:bg-emerald-950 dark:text-emerald-300">
+                          {item.zona}
                         </span>
-                        {item.zona && (
-                          <span className="rounded-full bg-emerald-50 px-2 py-0.5 text-xs text-emerald-800 dark:bg-emerald-950 dark:text-emerald-300">
-                            {item.zona}
-                          </span>
-                        )}
-                        {puedeIrACarga ? (
-                          <span className="text-xs font-medium text-emerald-700 dark:text-emerald-400">
-                            {labelCarga}
-                          </span>
-                        ) : (
-                          <span className="text-xs font-medium text-zinc-500">
-                            Ver detalle →
-                          </span>
-                        )}
-                      </div>
+                      )}
+                      {puedeIrACarga ? (
+                        <span className="text-xs font-medium text-emerald-700 dark:text-emerald-400">
+                          {labelCarga}
+                        </span>
+                      ) : (
+                        <span className="text-xs font-medium text-zinc-500">Ver detalle →</span>
+                      )}
                     </div>
                   </div>
-                </>
+                </div>
               );
 
               if (puedeIrACarga) {
                 return (
                   <li key={item.id}>
-                    <Link
-                      href={`/panel/mis-rutas/${ruta.id}/recolecciones/${item.id}`}
-                      className="block w-full rounded-2xl border border-zinc-200 bg-white p-4 text-left shadow-sm active:scale-[0.99] active:bg-zinc-50 dark:border-zinc-800 dark:bg-zinc-900 dark:active:bg-zinc-800"
-                    >
-                      {cardContent}
-                    </Link>
+                    <div className={cardShellClass}>
+                      <Link
+                        href={`/panel/mis-rutas/${ruta.id}/recolecciones/${item.id}`}
+                        className="block p-4 pb-2 active:scale-[0.99] active:bg-zinc-50 dark:active:bg-zinc-800"
+                      >
+                        {cardMain}
+                      </Link>
+                      <div className="flex flex-wrap items-center gap-2 px-4 pb-4 pl-[3.75rem]">
+                        <RecoleccionMapsButton item={item} />
+                      </div>
+                    </div>
                   </li>
                 );
               }
 
               return (
                 <li key={item.id}>
-                  <button
-                    type="button"
-                    onClick={() => setSelectedId(item.id)}
-                    className="w-full rounded-2xl border border-zinc-200 bg-white p-4 text-left shadow-sm active:scale-[0.99] active:bg-zinc-50 dark:border-zinc-800 dark:bg-zinc-900 dark:active:bg-zinc-800"
-                  >
-                    {cardContent}
-                  </button>
+                  <div className={cardShellClass}>
+                    <button
+                      type="button"
+                      onClick={() => setSelectedId(item.id)}
+                      className="block w-full p-4 pb-2 text-left active:scale-[0.99] active:bg-zinc-50 dark:active:bg-zinc-800"
+                    >
+                      {cardMain}
+                    </button>
+                    <div className="flex flex-wrap items-center gap-2 px-4 pb-4 pl-[3.75rem]">
+                      <RecoleccionMapsButton item={item} />
+                    </div>
+                  </div>
                 </li>
               );
             })}
@@ -300,9 +417,26 @@ export function RecolectorRutaDetalle({
       <RecolectorRecoleccionSheet
         open={selectedId !== null}
         recoleccion={selectedRecoleccion}
+        recolectorNombre={recolectorNombre}
         onClose={() => setSelectedId(null)}
       />
     </div>
+  );
+}
+
+function RecoleccionMapsButton({ item }: { item: RecolectorRecoleccionPreview }) {
+  const mapsUrl = buildGoogleMapsRecoleccionUrl(item);
+  if (!mapsUrl) return null;
+
+  return (
+    <a
+      href={mapsUrl}
+      target="_blank"
+      rel="noopener noreferrer"
+      className="inline-flex min-h-[1.75rem] items-center rounded-full border border-blue-200 bg-blue-50 px-2.5 text-xs font-semibold text-blue-800 active:bg-blue-100 dark:border-blue-900 dark:bg-blue-950 dark:text-blue-300 dark:active:bg-blue-900"
+    >
+      Maps
+    </a>
   );
 }
 

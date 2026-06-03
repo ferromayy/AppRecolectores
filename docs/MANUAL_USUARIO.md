@@ -247,13 +247,13 @@ Desde acá configurás precios globales con historial de vigencia. Cada parámet
 | **Precio de bolsa extra** | Cobro en campo (regla estándar): a partir de la **3.ª bolsa llena** se suma por cada bolsa adicional |
 | **Retiro reciclable mixto** | Cobro en campo **Mixto**: un solo precio que **incluye hasta 2 bolsas llenas** (1 o 2 → mismo total); desde la **3.ª**, bolsa extra |
 | **Precio bolsa punto** | Cobro **Empresa + Punto**: × **bolsas nuevas vendidas** |
-| **Precio bolsa llena punto** | Cobro **Empresa + Punto**: × **bolsas llenas punto** |
+| **Precio bolsa llena hogar** (clave `bolsa_llena_punto`) | Cobro **Empresa + Punto**: × **bolsas llenas hogar** |
 
 **Reglas de cobro en campo** (recolector), según datos de la parada:
 
 | Unidad / tipo | Cómo se calcula el total |
 |---------------|---------------------------|
-| **Empresa** + tipo **Punto** | **(bolsas llenas punto × bolsa llena punto) + (bolsas nuevas vendidas × bolsa punto)**. También se cargan bolsas llenas **hogar** y biotachos (no suman al total) |
+| **Empresa** + tipo **Punto** | **(bolsas llenas hogar × bolsa llena hogar) + (bolsas nuevas vendidas × bolsa punto)**. **Bolsas llenas punto**: solo cantidad; el cobro en punto va en efectivo/transferencia/QR. Biotachos: registro |
 | **Empresa** (otro tipo) | Siempre el **precio de retiro** de la planilla |
 | **Mixto** (`tipo de servicio`) | **0 bolsas:** retiro de planilla · **1 o 2 bolsas:** precio **Retiro reciclable mixto** (mismo total con 1 o 2) · **3+:** ese precio + **bolsa extra** por cada bolsa desde la 3.ª |
 | **Resto** (Hogar, Puntos, etc.) | Retiro de planilla; las **2 primeras** bolsas llenas incluidas; desde la **3.ª**, **bolsa extra** por bolsa |
@@ -460,7 +460,7 @@ No hace falta completar bolsas ni pagos.
    - Biotachos nuevos
 2. Revisá el **Precio total a cobrar** (el desglose cambia según unidad y tipo de servicio):
    - **Hogar / Puntos (estándar):** precio de retiro de la planilla; desde la **3.ª** bolsa llena, bolsa extra (Parámetros)
-   - **Empresa + Punto:** cargá **bolsas llenas punto** y **bolsas nuevas vendidas**; el total sale de Parámetros (bolsa llena punto / bolsa punto). **Bolsas llenas hogar** y biotachos son adicionales en el formulario
+   - **Empresa + Punto:** el total mínimo sale de **bolsas llenas hogar** y **bolsas nuevas vendidas** (Parámetros). **Bolsas llenas punto** es solo cantidad; el monto en punto lo cargás en los pagos
    - **Empresa** (sin Punto): siempre el precio de retiro de la planilla
    - **Mixto:** con 0 bolsas, precio de retiro de la planilla; con **1 o 2** bolsas, **Retiro reciclable mixto** (mismo monto); desde la **3.ª**, se suma bolsa extra
 3. Completá los **tres montos** (todos obligatorios; efectivo, transferencia y QR pueden ser **0**):

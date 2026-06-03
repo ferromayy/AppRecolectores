@@ -51,6 +51,7 @@ export default async function MisRutaDetallePage({ params }: Props) {
   return (
     <RecolectorRutaDetalle
       ruta={rutaDetalle}
+      recolectorNombre={auth.profile.full_name ?? ""}
       recoleccionesPreview={preview}
       recoleccionesDetalle={detalle}
       direccionesMaps={direccionesMaps}

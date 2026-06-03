@@ -52,10 +52,10 @@ export const PARAMETRO_PRECIO_UI: Record<
     inputLabel: "Nuevo precio bolsa punto *",
   },
   "bolsa-llena-punto": {
-    titulo: "Precio bolsa llena punto",
+    titulo: "Precio bolsa llena hogar (Empresa + Punto)",
     descripcion:
-      "Cobro Empresa + Punto: precio por cada bolsa llena punto en campo. Solo podés agregar un nuevo precio; el anterior se cierra automáticamente.",
-    inputLabel: "Nuevo precio bolsa llena punto *",
+      "Cobro Empresa + Punto: precio por cada bolsa llena hogar en campo. Las bolsas llenas punto solo se registran; el cobro punto va en los montos de pago. Solo podés agregar un nuevo precio; el anterior se cierra automáticamente.",
+    inputLabel: "Nuevo precio bolsa llena hogar *",
   },
 };
 
@@ -99,7 +99,7 @@ export function isTipoServicioMixto(tipoServicio: string | null | undefined): bo
   return normalizeTipoServicio(tipoServicio).toLowerCase() === "mixto";
 }
 
-/** Empresa + tipo de servicio Punto/Puntos: cobro por bolsa llena punto y bolsa punto. */
+/** Empresa + Punto: cobro automático = hogar × bolsa llena hogar + nuevas vendidas × bolsa punto. */
 export function isEmpresaPuntoCobro(
   unidad: string | null | undefined,
   tipoServicio: string | null | undefined,
@@ -154,11 +154,9 @@ export function calcPrecioTotalCobrar(
 }
 
 export function calcPrecioEmpresaPunto(input: PrecioCobroInput): number {
-  const puntos = sanitizeBolsasLlenas(input.bolsasLlenasPunto);
+  const hogar = sanitizeBolsasLlenas(input.bolsasLlenas);
   const vendidas = sanitizeBolsasLlenas(input.bolsasNuevasVendidas);
-  return (
-    puntos * input.precioBolsaLlenaPunto + vendidas * input.precioBolsaPunto
-  );
+  return hogar * input.precioBolsaLlenaPunto + vendidas * input.precioBolsaPunto;
 }
 
 export function calcPrecioTotalCobrarConReglas(input: PrecioCobroInput): number {
@@ -254,7 +252,7 @@ export function buildPrecioCobroDetalle(input: PrecioCobroInput): PrecioCobroDet
   };
 
   if (regla === "empresa_punto") {
-    const montoBolsaLlenaPunto = bolsasLlenasPunto * input.precioBolsaLlenaPunto;
+    const montoBolsaLlenaPunto = bolsasLlenas * input.precioBolsaLlenaPunto;
     const montoBolsaPunto = bolsasNuevasVendidas * input.precioBolsaPunto;
     const precioTotal = montoBolsaLlenaPunto + montoBolsaPunto;
 
@@ -283,15 +281,15 @@ export function buildPrecioCobroDetalle(input: PrecioCobroInput): PrecioCobroDet
       montoBolsaLlenaPuntoLabel: formatParametroMoney(montoBolsaLlenaPunto),
       montoBolsaPuntoLabel: formatParametroMoney(montoBolsaPunto),
       bolsaLlenaPuntoDetalleLabel:
-        bolsasLlenasPunto > 0
-          ? `${bolsasLlenasPunto} bolsa(s) llena(s) punto × ${precioBolsaLlenaPuntoLabel}`
+        bolsasLlenas > 0
+          ? `${bolsasLlenas} bolsa(s) llena(s) hogar × ${precioBolsaLlenaPuntoLabel}`
           : null,
       bolsaPuntoDetalleLabel:
         bolsasNuevasVendidas > 0
           ? `${bolsasNuevasVendidas} bolsa(s) nueva(s) vendida(s) × ${precioBolsaPuntoLabel}`
           : null,
       ayudaCobro:
-        "Empresa + Punto: total = (bolsas llenas punto × precio bolsa llena punto) + (bolsas nuevas vendidas × precio bolsa punto). Los contadores hogar/biotacho son informativos.",
+        "Empresa + Punto: total mínimo = (bolsas llenas hogar × precio bolsa llena hogar) + (bolsas nuevas vendidas × precio bolsa punto). Bolsas llenas punto: solo cantidad; el cobro en punto va en efectivo/transferencia/QR.",
     };
   }
 

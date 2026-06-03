@@ -6,14 +6,21 @@ import {
   formatRecolectorMoney,
   type RecolectorRecoleccionDetalle,
 } from "@/lib/domain/recolector-ruta";
+import { buildWhatsAppAvisoRecoleccion, buildWhatsAppUrl } from "@/lib/whatsapp";
 
 type Props = {
   open: boolean;
   recoleccion: RecolectorRecoleccionDetalle | null;
+  recolectorNombre: string;
   onClose: () => void;
 };
 
-export function RecolectorRecoleccionSheet({ open, recoleccion, onClose }: Props) {
+export function RecolectorRecoleccionSheet({
+  open,
+  recoleccion,
+  recolectorNombre,
+  onClose,
+}: Props) {
   useEffect(() => {
     if (!open) return;
 
@@ -31,7 +38,10 @@ export function RecolectorRecoleccionSheet({ open, recoleccion, onClose }: Props
 
   if (!open || !recoleccion) return null;
 
-  const telHref = recoleccion.telefonoNormalizado || recoleccion.telefono;
+  const telefono = recoleccion.telefonoNormalizado || recoleccion.telefono;
+  const whatsappHref = telefono
+    ? buildWhatsAppUrl(telefono, buildWhatsAppAvisoRecoleccion(recolectorNombre))
+    : "";
 
   return (
     <div className="fixed inset-0 z-50 flex flex-col justify-end">
@@ -100,12 +110,14 @@ export function RecolectorRecoleccionSheet({ open, recoleccion, onClose }: Props
           )}
         </dl>
 
-        {telHref && (
+        {whatsappHref && (
           <a
-            href={`tel:${telHref}`}
-            className="mt-5 flex min-h-[3rem] items-center justify-center rounded-2xl bg-blue-600 text-base font-semibold text-white active:bg-blue-700"
+            href={whatsappHref}
+            target="_blank"
+            rel="noopener noreferrer"
+            className="mt-5 flex min-h-[3rem] items-center justify-center rounded-2xl bg-[#25D366] text-base font-semibold text-white active:bg-[#1da851]"
           >
-            Llamar · {recoleccion.telefono}
+            WhatsApp · {recoleccion.telefono}
           </a>
         )}
 
