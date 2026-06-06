@@ -1,6 +1,8 @@
 import {
   calcPrecioTotalCobrarConReglas,
   isEmpresaPuntoCobro,
+  normalizeTipoServicio,
+  normalizeUnidad,
   type PrecioCobroInput,
 } from "@/lib/domain/sistema-parametros";
 import type { RecoleccionOperativaEstado, RutaEstado } from "@/types/database";
@@ -51,6 +53,42 @@ export function parsePrecioRetiro(precio: string | null | undefined): number {
   const cleaned = precio.replace(/[^\d,.-]/g, "").replace(",", ".");
   const n = Number(cleaned);
   return Number.isFinite(n) && n >= 0 ? n : 0;
+}
+
+export function isHogarOrganico(
+  unidad: string | null | undefined,
+  tipoServicio: string | null | undefined,
+): boolean {
+  return (
+    normalizeUnidad(unidad).toLowerCase() === "hogar" &&
+    normalizeTipoServicio(tipoServicio).toLowerCase() === "organico"
+  );
+}
+
+export function isTipoServicioReciclaje(tipoServicio: string | null | undefined): boolean {
+  return normalizeTipoServicio(tipoServicio).toLowerCase() === "reciclaje";
+}
+
+export type RecoleccionCampoContadoresRules = {
+  bolsasLlenasRequired: boolean;
+  bolsasNuevasRequired: boolean;
+  biotachosLlenosRequired: boolean;
+  biotachosNuevosRequired: boolean;
+};
+
+export function getRecoleccionCampoContadoresRules(
+  unidad: string | null | undefined,
+  tipoServicio: string | null | undefined,
+): RecoleccionCampoContadoresRules {
+  const hogarOrganico = isHogarOrganico(unidad, tipoServicio);
+  const reciclaje = isTipoServicioReciclaje(tipoServicio);
+
+  return {
+    bolsasLlenasRequired: !hogarOrganico,
+    bolsasNuevasRequired: !hogarOrganico,
+    biotachosLlenosRequired: !reciclaje,
+    biotachosNuevosRequired: !reciclaje,
+  };
 }
 
 export type RecoleccionCampoPayload = {
@@ -118,15 +156,28 @@ export function parseRecoleccionCampoBody(
   const bolsas_llenas_punto = parseOptionalCount(body.bolsas_llenas_punto);
   const bolsas_nuevas_vendidas = parseOptionalCount(body.bolsas_nuevas_vendidas);
 
-  if (
-    bolsas_llenas === null ||
-    biotachos_llenos === null ||
-    bolsas_nuevas === null ||
-    biotachos_nuevos === null
-  ) {
+  const contadoresRules = getRecoleccionCampoContadoresRules(
+    precios.unidad,
+    precios.tipoServicio,
+  );
+  const faltantes: string[] = [];
+  if (contadoresRules.bolsasLlenasRequired && bolsas_llenas === null) {
+    faltantes.push("bolsas llenas");
+  }
+  if (contadoresRules.bolsasNuevasRequired && bolsas_nuevas === null) {
+    faltantes.push("bolsas nuevas");
+  }
+  if (contadoresRules.biotachosLlenosRequired && biotachos_llenos === null) {
+    faltantes.push("biotachos llenos");
+  }
+  if (contadoresRules.biotachosNuevosRequired && biotachos_nuevos === null) {
+    faltantes.push("biotachos nuevos");
+  }
+
+  if (faltantes.length > 0) {
     return {
       ok: false,
-      error: "Bolsas y biotachos son obligatorios (podés poner 0)",
+      error: `Completá ${faltantes.join(", ")} (podés poner 0)`,
     };
   }
 
@@ -139,7 +190,7 @@ export function parseRecoleccionCampoBody(
 
   const precio_total = calcPrecioTotalCobrarConReglas({
     ...precios,
-    bolsasLlenas: bolsas_llenas,
+    bolsasLlenas: bolsas_llenas ?? 0,
     bolsasLlenasPunto: bolsas_llenas_punto ?? 0,
     bolsasNuevasVendidas: bolsas_nuevas_vendidas ?? 0,
   });

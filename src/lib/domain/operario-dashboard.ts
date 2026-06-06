@@ -40,6 +40,10 @@ export type RutaOperarioRow = {
   cierre_operario_at: string | null;
   monto_efectivo: number | null;
   monto_transferencia: number | null;
+  monto_a_recaudar: number;
+  recaudado_efectivo: number;
+  recaudado_transferencia: number;
+  recaudado_qr: number;
   total_recaudado: number;
   observaciones_operario: string | null;
   /** Campos usados en la tabla Historial */
@@ -49,6 +53,10 @@ export type RutaOperarioRow = {
   km_final: number | null;
   observaciones_recolector: string | null;
   insumos_detalle: InsumosHistorialDetalle;
+  bolsas_recolectadas: number;
+  biotachos_recolectados: number;
+  bolsas_recolectadas_detalle: string | null;
+  biotachos_recolectados_detalle: string | null;
 };
 
 export type RecoleccionOperarioRow = {
@@ -90,6 +98,12 @@ export type RecoleccionOperarioRow = {
   coordenadas_dms: string | null;
 };
 
+export type RecoleccionesPorUnidadTipo = {
+  unidad: string;
+  tipo_cliente: string;
+  cantidad: number;
+};
+
 export type RutaDetalleOperario = {
   id: string;
   fecha: string;
@@ -98,8 +112,15 @@ export type RutaDetalleOperario = {
   estado_label: string;
   recolector_nombre: string | null;
   recolecciones_exitosas: number;
+  exitosas_por_unidad_tipo: RecoleccionesPorUnidadTipo[];
   recolecciones_pendientes: number;
+  pendientes_por_unidad_tipo: RecoleccionesPorUnidadTipo[];
   recolecciones_canceladas: number;
+  canceladas_por_unidad_tipo: RecoleccionesPorUnidadTipo[];
+  monto_a_recaudar: number;
+  recaudado_efectivo: number;
+  recaudado_transferencia: number;
+  recaudado_qr: number;
   total_recaudado: number;
 };
 
@@ -109,14 +130,67 @@ function num(value: number | string | null | undefined): number {
   return Number.isFinite(n) ? n : 0;
 }
 
-function sumRecaudado(recolecciones: RecoleccionRow[]): number {
-  return recolecciones.reduce((acc, r) => {
-    const total =
-      r.precio_total != null
-        ? num(r.precio_total)
-        : num(r.monto_efectivo) + num(r.monto_transferencia);
-    return acc + total;
-  }, 0);
+/** Pagos por medio en paradas visitadas. */
+function sumRecaudadoPorMedioVisitadas(recolecciones: RecoleccionRow[]) {
+  let efectivo = 0;
+  let transferencia = 0;
+  let qr = 0;
+
+  for (const item of recolecciones) {
+    if (item.estado_operativo !== "visitada") continue;
+    efectivo += num(item.monto_efectivo);
+    transferencia += num(item.monto_transferencia);
+    qr += num(item.monto_qr);
+  }
+
+  return {
+    efectivo,
+    transferencia,
+    qr,
+    total: efectivo + transferencia + qr,
+  };
+}
+
+/** Suma de precio_total cargado en paradas visitadas. */
+function sumMontoARecaudarRuta(recolecciones: RecoleccionRow[]): number {
+  let total = 0;
+  for (const item of recolecciones) {
+    if (item.estado_operativo !== "visitada") continue;
+    if (item.precio_total != null) total += num(item.precio_total);
+  }
+  return total;
+}
+
+function sumMaterialesVisitadas(recolecciones: RecoleccionRow[]) {
+  let bolsasLlenas = 0;
+  let bolsasNuevas = 0;
+  let biotachosLlenos = 0;
+  let biotachosNuevos = 0;
+
+  for (const item of recolecciones) {
+    if (item.estado_operativo !== "visitada") continue;
+    bolsasLlenas += num(item.bolsas_llenas);
+    bolsasNuevas += num(item.bolsas_nuevas);
+    biotachosLlenos += num(item.biotachos_llenos);
+    biotachosNuevos += num(item.biotachos_nuevos);
+  }
+
+  return { bolsasLlenas, bolsasNuevas, biotachosLlenos, biotachosNuevos };
+}
+
+export function formatMaterialesRecolectadosDisplay(total: number): string {
+  return total === 0 ? "—" : String(total);
+}
+
+export function formatMaterialesRecolectadosDetalle(
+  llenas: number,
+  nuevas: number,
+): string | null {
+  if (llenas === 0 && nuevas === 0) return null;
+  const parts: string[] = [];
+  if (llenas > 0) parts.push(`${llenas} llena(s)`);
+  if (nuevas > 0) parts.push(`${nuevas} nueva(s)`);
+  return parts.join(", ");
 }
 
 export function buildRutaOperarioRows(
@@ -148,7 +222,6 @@ export function buildRutaOperarioRows(
       ["cancelada", "omitida"].includes(i.estado_operativo),
     ).length;
 
-    const recaudadoRecolecciones = sumRecaudado(items);
     const efectivoRecolecciones = items.reduce(
       (acc, item) => acc + num(item.monto_efectivo),
       0,
@@ -156,10 +229,8 @@ export function buildRutaOperarioRows(
     const efectivoRuta = ruta.monto_efectivo != null ? num(ruta.monto_efectivo) : null;
     const transferenciaRuta =
       ruta.monto_transferencia != null ? num(ruta.monto_transferencia) : null;
-    const total_recaudado =
-      efectivoRuta != null || transferenciaRuta != null
-        ? num(efectivoRuta) + num(transferenciaRuta)
-        : recaudadoRecolecciones;
+    const monto_a_recaudar = sumMontoARecaudarRuta(items);
+    const recaudado = sumRecaudadoPorMedioVisitadas(items);
 
     const insumos_detalle = buildInsumosHistorialDetalle(ruta, {
       puntosRecoleccion: items.length,
@@ -168,6 +239,11 @@ export function buildRutaOperarioRows(
       canceladas,
       efectivoRecolecciones,
     });
+
+    const materiales = sumMaterialesVisitadas(items);
+    const bolsas_recolectadas = materiales.bolsasLlenas + materiales.bolsasNuevas;
+    const biotachos_recolectados =
+      materiales.biotachosLlenos + materiales.biotachosNuevos;
 
     const inicioJornadaAt = getInicioJornadaAt(ruta);
 
@@ -191,7 +267,11 @@ export function buildRutaOperarioRows(
       cierre_operario_at: ruta.cierre_operario_at,
       monto_efectivo: efectivoRuta,
       monto_transferencia: transferenciaRuta,
-      total_recaudado,
+      monto_a_recaudar,
+      recaudado_efectivo: recaudado.efectivo,
+      recaudado_transferencia: recaudado.transferencia,
+      recaudado_qr: recaudado.qr,
+      total_recaudado: recaudado.total,
       observaciones_operario: ruta.observaciones_operario,
       duracion_recoleccion: formatDuracionRecoleccion(
         inicioJornadaAt,
@@ -204,6 +284,16 @@ export function buildRutaOperarioRows(
       km_final: ruta.km_final != null ? num(ruta.km_final) : null,
       observaciones_recolector: ruta.observaciones_recolector,
       insumos_detalle,
+      bolsas_recolectadas,
+      biotachos_recolectados,
+      bolsas_recolectadas_detalle: formatMaterialesRecolectadosDetalle(
+        materiales.bolsasLlenas,
+        materiales.bolsasNuevas,
+      ),
+      biotachos_recolectados_detalle: formatMaterialesRecolectadosDetalle(
+        materiales.biotachosLlenos,
+        materiales.biotachosNuevos,
+      ),
     };
   });
 }
@@ -314,13 +404,141 @@ export function formatCantidadBiotachosDetalle(item: Pick<
   return parts.join(", ");
 }
 
+export type RecoleccionOperarioDetalleCarga = {
+  tieneCarga: boolean;
+  bolsas: string | null;
+  biotachos: string | null;
+  efectivo: string | null;
+  transferencia: string | null;
+  qr: string | null;
+  cancelacion: string | null;
+};
+
+/** Retiro y cobro de una parada para la columna Detalle (Operativo). */
+export function buildRecoleccionOperarioDetalleCarga(
+  item: RecoleccionOperarioRow,
+): RecoleccionOperarioDetalleCarga {
+  const visitada = item.estado_operativo === "visitada";
+  const cancelada = item.estado_operativo === "cancelada";
+
+  const cancelacion =
+    cancelada && (item.motivo_cancelacion?.trim() || item.detalle?.trim())
+      ? item.motivo_cancelacion?.trim() || item.detalle?.trim() || null
+      : null;
+
+  if (cancelada) {
+    return {
+      tieneCarga: Boolean(cancelacion),
+      bolsas: null,
+      biotachos: null,
+      efectivo: null,
+      transferencia: null,
+      qr: null,
+      cancelacion,
+    };
+  }
+
+  if (!visitada) {
+    return {
+      tieneCarga: false,
+      bolsas: null,
+      biotachos: null,
+      efectivo: null,
+      transferencia: null,
+      qr: null,
+      cancelacion: null,
+    };
+  }
+
+  return {
+    tieneCarga: true,
+    bolsas: formatCantidadBolsasDetalle(item) ?? "0",
+    biotachos: formatCantidadBiotachosDetalle(item) ?? "0",
+    efectivo: formatMoney(item.monto_efectivo ?? 0),
+    transferencia: formatMoney(item.monto_transferencia ?? 0),
+    qr: formatMoney(item.monto_qr ?? 0),
+    cancelacion: null,
+  };
+}
+
 export function esFirmaDigitalImagen(firma: string | null): boolean {
   if (!firma) return false;
   return firma.startsWith("data:image") || firma.startsWith("http");
 }
 
+function labelUnidadTipo(value: string | null | undefined, fallback: string): string {
+  const text = value?.trim();
+  return text || fallback;
+}
+
+type RecoleccionUnidadTipoInput = Pick<
+  RecoleccionOperarioRow,
+  "estado_operativo" | "unidad" | "tipo_servicio"
+>;
+
+function esRecoleccionExitosa(estado: RecoleccionOperativaEstado): boolean {
+  return estado === "visitada";
+}
+
+function esRecoleccionPendiente(estado: RecoleccionOperativaEstado): boolean {
+  return estado === "pendiente" || estado === "en_camino";
+}
+
+function esRecoleccionCancelada(estado: RecoleccionOperativaEstado): boolean {
+  return estado === "cancelada" || estado === "omitida";
+}
+
+function buildRecoleccionesPorUnidadTipo(
+  recolecciones: RecoleccionUnidadTipoInput[],
+  matches: (estado: RecoleccionOperativaEstado) => boolean,
+): RecoleccionesPorUnidadTipo[] {
+  const map = new Map<string, RecoleccionesPorUnidadTipo>();
+
+  for (const item of recolecciones) {
+    if (!matches(item.estado_operativo)) continue;
+
+    const unidad = labelUnidadTipo(item.unidad, "Sin unidad");
+    const tipoCliente = labelUnidadTipo(item.tipo_servicio, "Sin tipo");
+    const key = `${unidad}\0${tipoCliente}`;
+    const current = map.get(key);
+
+    if (current) {
+      current.cantidad += 1;
+    } else {
+      map.set(key, { unidad, tipo_cliente: tipoCliente, cantidad: 1 });
+    }
+  }
+
+  return [...map.values()].sort(
+    (a, b) =>
+      b.cantidad - a.cantidad ||
+      a.unidad.localeCompare(b.unidad, "es") ||
+      a.tipo_cliente.localeCompare(b.tipo_cliente, "es"),
+  );
+}
+
+/** Exitosas (visitadas) agrupadas por unidad y tipo de cliente. */
+export function buildExitosasPorUnidadTipo(
+  recolecciones: RecoleccionUnidadTipoInput[],
+): RecoleccionesPorUnidadTipo[] {
+  return buildRecoleccionesPorUnidadTipo(recolecciones, esRecoleccionExitosa);
+}
+
+export function buildPendientesPorUnidadTipo(
+  recolecciones: RecoleccionUnidadTipoInput[],
+): RecoleccionesPorUnidadTipo[] {
+  return buildRecoleccionesPorUnidadTipo(recolecciones, esRecoleccionPendiente);
+}
+
+export function buildCanceladasPorUnidadTipo(
+  recolecciones: RecoleccionUnidadTipoInput[],
+): RecoleccionesPorUnidadTipo[] {
+  return buildRecoleccionesPorUnidadTipo(recolecciones, esRecoleccionCancelada);
+}
+
 export function buildRutaDetalle(
   ruta: RutaOperarioRow,
+  recolecciones: RecoleccionUnidadTipoInput[] = [],
 ): RutaDetalleOperario {
   return {
     id: ruta.id,
@@ -330,8 +548,15 @@ export function buildRutaDetalle(
     estado_label: RUTA_ESTADO_OPERARIO_LABELS[ruta.estado],
     recolector_nombre: ruta.recolector_nombre,
     recolecciones_exitosas: ruta.recolecciones_exitosas,
+    exitosas_por_unidad_tipo: buildExitosasPorUnidadTipo(recolecciones),
     recolecciones_pendientes: ruta.recolecciones_pendientes,
+    pendientes_por_unidad_tipo: buildPendientesPorUnidadTipo(recolecciones),
     recolecciones_canceladas: ruta.recolecciones_canceladas,
+    canceladas_por_unidad_tipo: buildCanceladasPorUnidadTipo(recolecciones),
+    monto_a_recaudar: ruta.monto_a_recaudar,
+    recaudado_efectivo: ruta.recaudado_efectivo,
+    recaudado_transferencia: ruta.recaudado_transferencia,
+    recaudado_qr: ruta.recaudado_qr,
     total_recaudado: ruta.total_recaudado,
   };
 }

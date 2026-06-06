@@ -1,6 +1,7 @@
 import { RutaEstadoBadge } from "@/components/panel/operario/operario-badges";
 import {
   formatDateTime,
+  formatMaterialesRecolectadosDisplay,
   formatMoney,
   formatRutaFecha,
   formatTurno,
@@ -14,6 +15,7 @@ type Props = {
   onSelect: (id: string) => void;
   onVerDetalle: (id: string) => void;
   onVerMapa: (id: string) => void;
+  onVerInsumos: (id: string) => void;
   onEditar: (id: string) => void;
   onSuspender?: (id: string) => void;
   onCierreOperario?: (id: string) => void;
@@ -27,6 +29,7 @@ export function OperarioRutasTable({
   onSelect,
   onVerDetalle,
   onVerMapa,
+  onVerInsumos,
   onEditar,
   onSuspender,
   onCierreOperario,
@@ -43,7 +46,7 @@ export function OperarioRutasTable({
 
   return (
     <div className="overflow-x-auto rounded-xl border border-zinc-200 bg-white dark:border-zinc-800 dark:bg-zinc-900">
-      <table className="min-w-[1200px] w-full text-left text-sm">
+      <table className="min-w-[1400px] w-full text-left text-sm">
         <thead className="border-b border-zinc-200 bg-zinc-50 text-xs uppercase tracking-wide text-zinc-600 dark:border-zinc-800 dark:bg-zinc-950 dark:text-zinc-400">
           <tr>
             <th className="px-3 py-3 font-medium">Fecha</th>
@@ -52,10 +55,14 @@ export function OperarioRutasTable({
             <th className="px-3 py-3 font-medium">Turno</th>
             <th className="px-3 py-3 font-medium text-center">Puntos</th>
             <th className="px-3 py-3 font-medium text-center">Exitosas</th>
+            <th className="px-3 py-3 font-medium text-center">Bolsas recolectadas</th>
+            <th className="px-3 py-3 font-medium text-center">Biotachos</th>
             <th className="px-3 py-3 font-medium text-right">Km</th>
             <th className="px-3 py-3 font-medium">Inicio jornada</th>
+            <th className="px-3 py-3 font-medium text-center">Insumos</th>
             <th className="px-3 py-3 font-medium">Cierre recolector</th>
             <th className="px-3 py-3 font-medium">Cierre operario</th>
+            <th className="px-3 py-3 font-medium text-right">Monto a recaudar</th>
             <th className="px-3 py-3 font-medium text-right">Total recaudado</th>
             <th className="px-3 py-3 font-medium">Observaciones</th>
             <th className="px-3 py-3 font-medium text-center">Detalle</th>
@@ -86,6 +93,18 @@ export function OperarioRutasTable({
                 <td className="px-3 py-2.5">{formatTurno(ruta.turno)}</td>
                 <td className="px-3 py-2.5 text-center">{ruta.puntos_recoleccion}</td>
                 <td className="px-3 py-2.5 text-center">{ruta.recolecciones_exitosas}</td>
+                <td
+                  className="px-3 py-2.5 text-center font-medium"
+                  title={ruta.bolsas_recolectadas_detalle ?? undefined}
+                >
+                  {formatMaterialesRecolectadosDisplay(ruta.bolsas_recolectadas)}
+                </td>
+                <td
+                  className="px-3 py-2.5 text-center font-medium"
+                  title={ruta.biotachos_recolectados_detalle ?? undefined}
+                >
+                  {formatMaterialesRecolectadosDisplay(ruta.biotachos_recolectados)}
+                </td>
                 <td className="px-3 py-2.5 text-right">
                   {ruta.km_recorridos != null ? ruta.km_recorridos : "—"}
                 </td>
@@ -93,6 +112,18 @@ export function OperarioRutasTable({
                   <span suppressHydrationWarning>
                     {formatDateTime(ruta.inicio_jornada_at)}
                   </span>
+                </td>
+                <td className="px-3 py-2.5 text-center">
+                  <button
+                    type="button"
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      onVerInsumos(ruta.id);
+                    }}
+                    className="rounded-lg border border-violet-200 bg-violet-50 px-2.5 py-1 text-xs font-medium text-violet-800 hover:bg-violet-100 dark:border-violet-900 dark:bg-violet-950 dark:text-violet-300 dark:hover:bg-violet-900"
+                  >
+                    Ver insumos
+                  </button>
                 </td>
                 <td className="whitespace-nowrap px-3 py-2.5 text-zinc-600">
                   <span suppressHydrationWarning>
@@ -103,6 +134,9 @@ export function OperarioRutasTable({
                   <span suppressHydrationWarning>
                     {formatDateTime(ruta.cierre_operario_at)}
                   </span>
+                </td>
+                <td className="whitespace-nowrap px-3 py-2.5 text-right text-zinc-700 dark:text-zinc-300">
+                  {formatMoney(ruta.monto_a_recaudar)}
                 </td>
                 <td className="whitespace-nowrap px-3 py-2.5 text-right font-medium">
                   {formatMoney(ruta.total_recaudado)}

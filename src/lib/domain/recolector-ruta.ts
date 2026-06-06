@@ -35,6 +35,11 @@ export type RecolectorRutaDetalle = {
   kmInicial: number | null;
   insumosInicio: InsumoInicio[];
   insumosResumen: string;
+  montoARecaudar: number;
+  recaudadoEfectivo: number;
+  recaudadoTransferencia: number;
+  recaudadoQr: number;
+  totalRecaudado: number;
   efectivoRecaudado: number;
   totalEfectivo: number | null;
   recoleccionesCount: number;
@@ -120,14 +125,35 @@ export function getInicioJornadaAt(ruta: Pick<RutaRow, "inicio_jornada_at" | "me
   return null;
 }
 
+function sumRecaudoVisitadas(recolecciones: RecoleccionRow[]) {
+  let efectivo = 0;
+  let transferencia = 0;
+  let qr = 0;
+  let montoARecaudar = 0;
+
+  for (const item of recolecciones) {
+    if (item.estado_operativo !== "visitada") continue;
+    efectivo += num(item.monto_efectivo);
+    transferencia += num(item.monto_transferencia);
+    qr += num(item.monto_qr);
+    if (item.precio_total != null) montoARecaudar += num(item.precio_total);
+  }
+
+  return {
+    montoARecaudar,
+    recaudadoEfectivo: efectivo,
+    recaudadoTransferencia: transferencia,
+    recaudadoQr: qr,
+    totalRecaudado: efectivo + transferencia + qr,
+  };
+}
+
 export function buildRecolectorRutaDetalle(
   ruta: RutaRow,
   recolecciones: RecoleccionRow[],
 ): RecolectorRutaDetalle {
-  const efectivoRecaudado = recolecciones.reduce(
-    (acc, item) => acc + num(item.monto_efectivo),
-    0,
-  );
+  const recaudo = sumRecaudoVisitadas(recolecciones);
+  const efectivoRecaudado = recaudo.recaudadoEfectivo;
 
   const totalEfectivo =
     ruta.monto_efectivo != null ? num(ruta.monto_efectivo) : efectivoRecaudado > 0 ? efectivoRecaudado : null;
@@ -159,6 +185,11 @@ export function buildRecolectorRutaDetalle(
     kmInicial: ruta.km_inicial != null ? num(ruta.km_inicial) : null,
     insumosInicio,
     insumosResumen: formatInsumosResumen(insumosInicio),
+    montoARecaudar: recaudo.montoARecaudar,
+    recaudadoEfectivo: recaudo.recaudadoEfectivo,
+    recaudadoTransferencia: recaudo.recaudadoTransferencia,
+    recaudadoQr: recaudo.recaudadoQr,
+    totalRecaudado: recaudo.totalRecaudado,
     efectivoRecaudado,
     totalEfectivo,
     recoleccionesCount: recolecciones.length,
@@ -211,21 +242,13 @@ export function buildRecolectorRecoleccionDetalle(
 }
 
 /**
- * Direcciones para el botón Maps de la ruta: solo paradas pendientes a partir de la
- * primera posterior (en orden) a la última visitada, cancelada u omitida.
+ * Direcciones para el botón Maps de la ruta: todas las paradas abiertas (pendiente o en camino)
+ * en el orden de la ruta, aunque haya paradas cerradas más adelante.
  */
 export function buildDireccionesMapsActivas(
   recolecciones: Pick<RecoleccionRow, "direccion" | "estado_operativo">[],
 ): string[] {
-  let startIndex = 0;
-  for (let i = 0; i < recolecciones.length; i++) {
-    if (recoleccionCerradaParaRecolector(recolecciones[i].estado_operativo)) {
-      startIndex = i + 1;
-    }
-  }
-
   return recolecciones
-    .slice(startIndex)
     .filter((item) => !recoleccionCerradaParaRecolector(item.estado_operativo))
     .map((item) => item.direccion.trim())
     .filter(Boolean);

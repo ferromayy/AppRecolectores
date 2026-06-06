@@ -73,7 +73,12 @@ export function OperarioDashboard({
     () => recolecciones.filter((r) => r.ruta_id === selectedRutaId),
     [recolecciones, selectedRutaId],
   );
-  const detalle = detalleRuta ? buildRutaDetalle(detalleRuta) : null;
+  const detalle = detalleRuta
+    ? buildRutaDetalle(
+        detalleRuta,
+        recolecciones.filter((item) => item.ruta_id === detalleRuta.id),
+      )
+    : null;
 
   function refreshData() {
     router.refresh();
@@ -227,6 +232,7 @@ export function OperarioDashboard({
               setMapaRutaId(id);
               setSelectedRutaId(id);
             }}
+            onVerInsumos={setInsumosRutaId}
             onEditar={setEditRutaId}
             onSuspender={setSuspenderRutaId}
             onCierreOperario={abrirCierreOperario}

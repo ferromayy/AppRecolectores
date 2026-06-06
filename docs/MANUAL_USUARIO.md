@@ -403,7 +403,8 @@ Dentro de cada sección, las rutas se ordenan por fecha (más recientes arriba).
    - Turno, fecha, estado
    - Efectivo recaudado (si hay cargas)
    - Km iniciales e insumos (después de iniciar)
-   - Lista de **recolecciones** en orden
+   - Botones **Maps** (recorrido), **Avisar** (WhatsApp, tras iniciar) e **Inicio de ruta**
+   - Lista de **recolecciones** en orden (cada una con su botón **Maps**)
 
 Si la ruta está **Suspendida**, verás un aviso y no podrás operarla hasta que el operario la reactive.
 
@@ -420,11 +421,29 @@ Si la ruta está **Suspendida**, verás un aviso y no podrás operarla hasta que
 
 > Hasta que no iniciés la ruta, las paradas solo se pueden **ver** (preview), no cargar.
 
-### 5.4 Abrir Maps (navegación)
+### 5.4 Maps y avisos por WhatsApp
 
-En el detalle de ruta, tocá **Maps**. Se abre Google Maps con las direcciones de las paradas **pendientes** (las ya visitadas o canceladas no se incluyen), en el orden de la ruta.
+#### Maps — toda la ruta
 
-No necesitás configurar nada: usa la app de Maps del teléfono.
+En el detalle de ruta, tocá **Maps** (al lado de **Avisar**). Se abre Google Maps con un recorrido por las paradas que te faltan, **en el orden de la ruta**.
+
+Solo entran paradas **pendientes** o **en camino**. Las visitadas, canceladas u omitidas no se incluyen. Si visitaste paradas fuera de orden (por ejemplo la 1, 2 y 7), Maps sigue mostrando las que faltan en medio (3, 4, 5, 6) y cualquier otra abierta que venga después.
+
+Si no queda ninguna parada abierta, el botón Maps queda deshabilitado.
+
+No requiere configuración extra: usa la app de Maps del teléfono.
+
+#### Maps — una parada
+
+En cada fila de la lista hay un botón **Maps** que abre **solo esa dirección** (coordenadas si están cargadas; si no, la dirección escrita). Sirve para ir a un cliente puntual sin armar el recorrido completo.
+
+#### Avisar clientes (WhatsApp)
+
+Después de **iniciar la ruta**, el botón verde **Avisar** abre WhatsApp con un mensaje prearmado para los clientes con teléfono (“Soy [tu nombre] tu recolector/a de hoy…”). Si hay varios, la app abre el primer chat y muestra **Siguiente** / **Terminar** para seguir con el resto.
+
+El teléfono debe estar cargado en la parada (planilla o panel operario).
+
+Si la ruta **aún no está iniciada**, al tocar una parada solo para verla (preview) podés usar **WhatsApp · teléfono** en el detalle deslizable para avisar a ese cliente.
 
 ### 5.5 Cargar una recolección (parada)
 
@@ -516,8 +535,10 @@ Login
   → Mis rutas (Activas / Completadas / Suspendidas)
     → Detalle de ruta
       → Inicio de ruta (km + insumos)     ← una vez por jornada
-      → Maps (navegación a paradas pendientes)
+      → Maps (recorrido a paradas restantes)
+      → Avisar (WhatsApp a clientes)      ← después de iniciar
       → Por cada parada:
+          → Maps (solo esa parada)
           → Cargar en campo (retiro + cobro + firma)
           → o Cancelar con motivo
       → Finalizar ruta                    ← formulario de cierre
@@ -652,6 +673,8 @@ Documentación técnica de la integración: [SHEETS_INTEGRATION.md](./SHEETS_INT
 ### Maps del recolector no abre direcciones
 
 - Verificá que las paradas tengan **dirección** cargada
+- El botón **Maps** de la ruta se deshabilita si no quedan paradas abiertas (todas visitadas, canceladas u omitidas)
+- El recorrido de la ruta **no incluye** paradas ya cerradas: arranca desde la siguiente en orden
 - Probá con conexión a internet activa
 
 ---

@@ -396,11 +396,11 @@ Componentes en `src/components/panel/recolector/`:
 |------------|---------|
 | `recolector-shell.tsx` | Layout mobile + header + bottom nav |
 | `mis-rutas-cards.tsx` | Listado agrupado por categoría (Activas / Completadas / Suspendidas) |
-| `recolector-ruta-detalle.tsx` | Detalle, Maps, lista de paradas, botón **Finalizar ruta** |
+| `recolector-ruta-detalle.tsx` | Detalle, **Maps** (ruta + por parada), **Avisar** (WhatsApp), lista de paradas, botón **Finalizar ruta** |
 | `recolector-finalizar-ruta-form.tsx` | Formulario de cierre antes de finalizar |
 | `recolector-inicio-ruta-form.tsx` | Km + insumos |
 | `recolector-recoleccion-campo-form.tsx` | Carga por parada (desglose según regla empresa/mixto/estándar) |
-| `recolector-recoleccion-sheet.tsx` | Preview read-only (ruta no iniciada) |
+| `recolector-recoleccion-sheet.tsx` | Preview read-only (ruta no iniciada); enlace **WhatsApp** por parada |
 
 Dominio: `src/lib/domain/recolector-ruta.ts`, `recolector-recoleccion-form.ts`, `recolector-rutas-list.ts`, `ruta-estado-transiciones.ts`
 
@@ -468,6 +468,19 @@ Función `getInicioJornadaAt()` en `recolector-ruta.ts`:
 
 Usada en detalle recolector, formulario de campo, API PATCH de carga y evaluación de finalizar.
 
+#### Maps y WhatsApp (recolector)
+
+| Archivo | Función |
+|---------|---------|
+| `src/lib/whatsapp.ts` | Mensaje de aviso, URL `wa.me`, lista de paradas con teléfono (`buildWhatsAppAvisosRecolecciones`) |
+| `recolector-ruta.ts` | `buildDireccionesMapsActivas`, `buildGoogleMapsRecoleccionUrl`, `buildGoogleMapsDirectionsUrl` |
+
+**Maps (ruta):** `buildDireccionesMapsActivas` incluye todas las paradas abiertas (`pendiente`, `en_camino`) en orden de ruta, excluyendo las cerradas (`visitada`, `cancelada`, `omitida` vía `recoleccionCerradaParaRecolector`), aunque haya paradas cerradas más adelante en el recorrido.
+
+**Maps (parada):** `buildGoogleMapsRecoleccionUrl` — coordenadas si existen; si no, búsqueda por dirección. En UI el enlace va **fuera** del `Link` de la tarjeta (evitar `<a>` anidado / error de hidratación).
+
+**WhatsApp:** el botón **Avisar** abre chats en secuencia (WhatsApp no permite envío masivo real desde el navegador). Requiere ruta iniciada y teléfono en parada.
+
 #### Suspender, reactivar y cierre operario (staff)
 
 - **Suspender:** `POST .../suspender` desde `borrador`, `activa`, `en_curso` → `suspendida`
@@ -523,6 +536,7 @@ El home del recolector (`/panel`) calcula “hoy” con timezone Argentina y mue
 | Script | Uso |
 |--------|-----|
 | `scripts/apply-pending-migrations.mjs` | Aplicar migraciones operativas/recolector |
+| `scripts/clear-rutas-recolecciones.mjs` | Borrar todas las rutas y recolecciones (pruebas); no toca usuarios ni parámetros |
 | `scripts/reset-superadmin-password.mjs` | Reset de contraseña del superadmin vía API |
 | `scripts/reset-users-except-superadmin.mjs` | Limpiar usuarios Auth (excepto superadmin) |
 | `scripts/google-apps-script/ImportarRuta.gs` | Menú en Google Sheets |

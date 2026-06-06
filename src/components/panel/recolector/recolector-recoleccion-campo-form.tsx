@@ -7,7 +7,7 @@ import { useMemo, useState } from "react";
 import {
   type RecoleccionCampoFormData,
 } from "@/lib/domain/recolector-recoleccion-form";
-import { formatPrecioDisplay } from "@/lib/domain/recolector-recoleccion-campo";
+import { formatPrecioDisplay, getRecoleccionCampoContadoresRules } from "@/lib/domain/recolector-recoleccion-campo";
 import {
   buildPrecioCobroDetalle,
   type PrecioCobroDetalle,
@@ -40,6 +40,10 @@ export function RecolectorRecoleccionCampoForm({ data, rutaNombre }: Props) {
   const [saving, setSaving] = useState(false);
 
   const esCancelacion = motivoCancelacion.trim().length > 0;
+  const contadoresRules = useMemo(
+    () => getRecoleccionCampoContadoresRules(data.unidad, data.tipoServicio),
+    [data.unidad, data.tipoServicio],
+  );
   const parseCount = (value: string) =>
     value.trim() === "" ? 0 : Number.parseInt(value, 10) || 0;
   const bolsasLlenasNum = parseCount(bolsasLlenas);
@@ -223,34 +227,44 @@ export function RecolectorRecoleccionCampoForm({ data, rutaNombre }: Props) {
               )}
               <div className="grid grid-cols-2 gap-3">
                 <Field
-                  label={data.esEmpresaPunto ? "Bolsas llenas hogar *" : "Bolsas llenas *"}
+                  label={data.esEmpresaPunto ? "Bolsas llenas hogar" : "Bolsas llenas"}
                   value={bolsasLlenas}
                   onChange={setBolsasLlenas}
+                  required={contadoresRules.bolsasLlenasRequired}
                 />
                 {data.esEmpresaPunto && (
                   <>
                     <Field
-                      label="Bolsas llenas punto (solo cantidad) *"
+                      label="Bolsas llenas punto (solo cantidad)"
                       value={bolsasLlenasPunto}
                       onChange={setBolsasLlenasPunto}
+                      required
                     />
                     <Field
-                      label="Bolsas nuevas vendidas *"
+                      label="Bolsas nuevas vendidas"
                       value={bolsasNuevasVendidas}
                       onChange={setBolsasNuevasVendidas}
+                      required
                     />
                   </>
                 )}
                 <Field
-                  label="Biotachos llenos *"
+                  label="Biotachos llenos"
                   value={biotachosLlenos}
                   onChange={setBiotachosLlenos}
+                  required={contadoresRules.biotachosLlenosRequired}
                 />
-                <Field label="Bolsas nuevas *" value={bolsasNuevas} onChange={setBolsasNuevas} />
                 <Field
-                  label="Biotachos nuevos *"
+                  label="Bolsas nuevas"
+                  value={bolsasNuevas}
+                  onChange={setBolsasNuevas}
+                  required={contadoresRules.bolsasNuevasRequired}
+                />
+                <Field
+                  label="Biotachos nuevos"
                   value={biotachosNuevos}
                   onChange={setBiotachosNuevos}
+                  required={contadoresRules.biotachosNuevosRequired}
                 />
               </div>
             </section>
@@ -515,20 +529,25 @@ function Field({
   label,
   value,
   onChange,
+  required = true,
 }: {
   label: string;
   value: string;
   onChange: (v: string) => void;
+  required?: boolean;
 }) {
   return (
     <label className="block space-y-1">
-      <span className="text-xs font-medium text-zinc-600 dark:text-zinc-400">{label}</span>
+      <span className="text-xs font-medium text-zinc-600 dark:text-zinc-400">
+        {label}
+        {required ? " *" : ""}
+      </span>
       <input
         type="number"
         inputMode="numeric"
         min="0"
         step="1"
-        required
+        required={required}
         value={value}
         onChange={(e) => onChange(e.target.value)}
         className={inputClass}

@@ -189,8 +189,41 @@ export function RecolectorRutaDetalle({
               </span>
             </dd>
           </div>
-          <DetailRow label="Efectivo recaudado" value={formatRecolectorMoney(ruta.efectivoRecaudado)} />
-          <DetailRow label="Total efectivo" value={formatRecolectorMoney(ruta.totalEfectivo)} />
+          {(ruta.rutaIniciada || ruta.rutaFinalizada) && (
+            <>
+              <p className="mt-4 text-xs font-semibold uppercase tracking-wide text-zinc-500">
+                Recaudación
+              </p>
+              <div className="mt-2 space-y-3">
+                <DetailRow
+                  label="Monto a recaudar"
+                  value={formatRecolectorMoney(ruta.montoARecaudar)}
+                />
+                <DetailRow
+                  label="Recaudado en efectivo"
+                  value={formatRecolectorMoney(ruta.recaudadoEfectivo)}
+                />
+                <DetailRow
+                  label="Recaudado por transferencia"
+                  value={formatRecolectorMoney(ruta.recaudadoTransferencia)}
+                />
+                <DetailRow
+                  label="Recaudado por QR"
+                  value={formatRecolectorMoney(ruta.recaudadoQr)}
+                />
+                <DetailRow
+                  label="Total recaudado"
+                  value={formatRecolectorMoney(ruta.totalRecaudado)}
+                />
+              </div>
+            </>
+          )}
+          {ruta.rutaFinalizada && ruta.totalEfectivo != null && (
+            <DetailRow
+              label="Total efectivo (cierre)"
+              value={formatRecolectorMoney(ruta.totalEfectivo)}
+            />
+          )}
           {ruta.rutaIniciada && (
             <>
               <DetailRow
