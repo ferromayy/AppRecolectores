@@ -16,6 +16,7 @@ type Props = {
   onVerDetalle: (id: string) => void;
   onVerMapa: (id: string) => void;
   onVerInsumos: (id: string) => void;
+  onPrepararInsumos: (id: string) => void;
   onEditar: (id: string) => void;
   onSuspender?: (id: string) => void;
   onCierreOperario?: (id: string) => void;
@@ -30,6 +31,7 @@ export function OperarioRutasTable({
   onVerDetalle,
   onVerMapa,
   onVerInsumos,
+  onPrepararInsumos,
   onEditar,
   onSuspender,
   onCierreOperario,
@@ -59,6 +61,7 @@ export function OperarioRutasTable({
             <th className="px-3 py-3 font-medium text-center">Biotachos</th>
             <th className="px-3 py-3 font-medium text-right">Km</th>
             <th className="px-3 py-3 font-medium">Inicio jornada</th>
+            <th className="px-3 py-3 font-medium text-center">Preparación</th>
             <th className="px-3 py-3 font-medium text-center">Insumos</th>
             <th className="px-3 py-3 font-medium">Cierre recolector</th>
             <th className="px-3 py-3 font-medium">Cierre operario</th>
@@ -112,6 +115,27 @@ export function OperarioRutasTable({
                   <span suppressHydrationWarning>
                     {formatDateTime(ruta.inicio_jornada_at)}
                   </span>
+                </td>
+                <td className="px-3 py-2.5 text-center">
+                  <button
+                    type="button"
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      onPrepararInsumos(ruta.id);
+                    }}
+                    className={
+                      ruta.insumos_operario_completado
+                        ? "rounded-lg border border-emerald-200 bg-emerald-50 px-2.5 py-1 text-xs font-medium text-emerald-800 hover:bg-emerald-100 dark:border-emerald-800 dark:bg-emerald-950 dark:text-emerald-300 dark:hover:bg-emerald-900"
+                        : "rounded-lg border border-amber-200 bg-amber-50 px-2.5 py-1 text-xs font-medium text-amber-900 hover:bg-amber-100 dark:border-amber-900 dark:bg-amber-950 dark:text-amber-200 dark:hover:bg-amber-900"
+                    }
+                    title={
+                      ruta.insumos_operario_completado
+                        ? "Preparación completada — ver o editar"
+                        : "Completar insumos antes de que el recolector inicie"
+                    }
+                  >
+                    {ruta.insumos_operario_completado ? "Ver prep." : "Completar"}
+                  </button>
                 </td>
                 <td className="px-3 py-2.5 text-center">
                   <button

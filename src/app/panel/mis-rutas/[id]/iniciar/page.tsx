@@ -3,6 +3,7 @@ import { notFound, redirect } from "next/navigation";
 
 import { RecolectorInicioRutaForm } from "@/components/panel/recolector/recolector-inicio-ruta-form";
 import { requireAuth } from "@/lib/auth/session";
+import { insumosOperarioCompletados } from "@/lib/domain/ruta-insumos";
 import { createClient } from "@/lib/supabase/server";
 
 type Props = { params: Promise<{ id: string }> };
@@ -22,7 +23,7 @@ export default async function IniciarRutaPage({ params }: Props) {
 
   const { data: ruta, error } = await supabase
     .from("rutas")
-    .select("id, nombre, estado")
+    .select("id, nombre, estado, insumos_operario")
     .eq("id", id)
     .eq("asignado_a", auth.user.id)
     .maybeSingle();
@@ -70,6 +71,22 @@ export default async function IniciarRutaPage({ params }: Props) {
 
   if (ruta.estado === "suspendida") {
     redirect(`/panel/mis-rutas/${id}`);
+  }
+
+  if (!insumosOperarioCompletados(ruta.insumos_operario)) {
+    return (
+      <div className="space-y-4">
+        <p className="rounded-2xl border border-amber-200 bg-amber-50 p-4 text-sm text-amber-900 dark:border-amber-900 dark:bg-amber-950/40 dark:text-amber-200">
+          El operario debe completar la preparación de insumos antes de que puedas iniciar esta ruta.
+        </p>
+        <Link
+          href={`/panel/mis-rutas/${id}`}
+          className="inline-flex min-h-[3rem] items-center text-sm font-medium text-emerald-700 dark:text-emerald-400"
+        >
+          ← Volver al detalle
+        </Link>
+      </div>
+    );
   }
 
   return <RecolectorInicioRutaForm rutaId={ruta.id} rutaNombre={ruta.nombre} />;

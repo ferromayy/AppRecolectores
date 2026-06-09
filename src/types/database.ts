@@ -165,6 +165,8 @@ export type Database = {
           metadata: Json;
           km_inicial: number | null;
           insumos_inicio: Json;
+          insumos_operario: Json;
+          insumos_operario_at: string | null;
           km_recorridos: number | null;
           km_final: number | null;
           descarga: boolean;
@@ -199,6 +201,8 @@ export type Database = {
           metadata?: Json;
           km_inicial?: number | null;
           insumos_inicio?: Json;
+          insumos_operario?: Json;
+          insumos_operario_at?: string | null;
           km_recorridos?: number | null;
           km_final?: number | null;
           descarga?: boolean;
@@ -233,6 +237,8 @@ export type Database = {
           metadata?: Json;
           km_inicial?: number | null;
           insumos_inicio?: Json;
+          insumos_operario?: Json;
+          insumos_operario_at?: string | null;
           km_recorridos?: number | null;
           km_final?: number | null;
           descarga?: boolean;

@@ -1,4 +1,5 @@
 import type { InsumoInicio } from "@/lib/domain/ruta-insumos";
+import { parseInsumosFromJson } from "@/lib/domain/ruta-insumos";
 import { calcTotalEfectivo } from "@/lib/domain/recolector-cierre-ruta";
 import type { Database } from "@/types/database";
 
@@ -32,18 +33,7 @@ function num(value: number | string | null | undefined): number {
 }
 
 function parseInsumosInicio(value: unknown): InsumoInicio[] {
-  if (!Array.isArray(value)) return [];
-  const result: InsumoInicio[] = [];
-  for (const item of value) {
-    if (!item || typeof item !== "object") continue;
-    const row = item as Record<string, unknown>;
-    const tipo = String(row.tipo ?? "");
-    const cantidad = num(row.cantidad as string | number | null | undefined);
-    if (tipo && cantidad > 0) {
-      result.push({ tipo: tipo as InsumoInicio["tipo"], cantidad: Math.round(cantidad) });
-    }
-  }
-  return result;
+  return parseInsumosFromJson(value);
 }
 
 export function contarInsumosInicio(insumos: InsumoInicio[]) {

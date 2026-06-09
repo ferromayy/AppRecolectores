@@ -35,4 +35,9 @@ ALTER TABLE public.ruta_recolecciones
 ADD COLUMN IF NOT EXISTS bolsas_llenas_punto INTEGER,
 ADD COLUMN IF NOT EXISTS bolsas_nuevas_vendidas INTEGER;
 
+-- 20260604120000_rutas_insumos_operario.sql
+ALTER TABLE public.rutas
+ADD COLUMN IF NOT EXISTS insumos_operario JSONB NOT NULL DEFAULT '[]'::jsonb,
+ADD COLUMN IF NOT EXISTS insumos_operario_at TIMESTAMPTZ;
+
 NOTIFY pgrst, 'reload schema';

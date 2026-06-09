@@ -1,7 +1,7 @@
 import { NextResponse } from "next/server";
 
 import { requireAuth } from "@/lib/auth/session";
-import { parseInicioRutaBody } from "@/lib/domain/ruta-insumos";
+import { insumosOperarioCompletados, parseInicioRutaBody } from "@/lib/domain/ruta-insumos";
 import { createAdminClient } from "@/lib/supabase/admin";
 import type { Database, Json } from "@/types/database";
 
@@ -43,7 +43,7 @@ export async function POST(request: Request, { params }: Props) {
 
   const { data: ruta, error: fetchError } = await admin
     .from("rutas")
-    .select("id, asignado_a, estado, metadata")
+    .select("id, asignado_a, estado, metadata, insumos_operario, inicio_jornada_at")
     .eq("id", rutaId)
     .maybeSingle();
 
@@ -72,6 +72,16 @@ export async function POST(request: Request, { params }: Props) {
   if (ruta.estado === "suspendida") {
     return NextResponse.json(
       { ok: false, error: "Esta ruta está suspendida. Contactá al operario." },
+      { status: 403 },
+    );
+  }
+
+  if (!insumosOperarioCompletados(ruta.insumos_operario)) {
+    return NextResponse.json(
+      {
+        ok: false,
+        error: "El operario debe completar la preparación de insumos antes de iniciar la ruta",
+      },
       { status: 403 },
     );
   }

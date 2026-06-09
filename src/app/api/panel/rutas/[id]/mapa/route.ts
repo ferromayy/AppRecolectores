@@ -9,7 +9,7 @@ import { getGoogleGeocodingKey } from "@/lib/env";
 import { createAdminClient } from "@/lib/supabase/admin";
 
 import type { MapaPunto, MapaRecoleccionItem } from "@/lib/domain/mapa-puntos";
-import { toMapaPuntos } from "@/lib/domain/mapa-puntos";
+import { formatHoraProgramadaMapa, toMapaPuntos } from "@/lib/domain/mapa-puntos";
 
 export type { MapaPunto, MapaRecoleccionItem };
 
@@ -44,7 +44,7 @@ export async function GET(_request: Request, { params }: Props) {
 
   const { data: recolecciones, error } = await admin
     .from("ruta_recolecciones")
-    .select("id, orden, nombre, direccion, barrio, depto, zona, latitud, longitud")
+    .select("id, orden, nombre, direccion, barrio, depto, zona, hora, latitud, longitud")
     .eq("ruta_id", rutaId)
     .order("orden", { ascending: true });
 
@@ -70,6 +70,8 @@ export async function GET(_request: Request, { params }: Props) {
   }
 
   for (const item of recolecciones ?? []) {
+    const horaProgramada = formatHoraProgramadaMapa(item.hora);
+
     if (item.latitud != null && item.longitud != null) {
       items.push({
         id: item.id,
@@ -77,6 +79,7 @@ export async function GET(_request: Request, { params }: Props) {
         nombre: item.nombre,
         direccion: item.direccion,
         zona: item.zona,
+        horaProgramada,
         lat: item.latitud,
         lng: item.longitud,
       });
@@ -100,6 +103,7 @@ export async function GET(_request: Request, { params }: Props) {
         nombre: item.nombre,
         direccion: item.direccion,
         zona: item.zona,
+        horaProgramada,
         lat: null,
         lng: null,
       });
@@ -123,6 +127,7 @@ export async function GET(_request: Request, { params }: Props) {
       nombre: item.nombre,
       direccion: item.direccion,
       zona: item.zona,
+      horaProgramada,
       lat: hit.lat,
       lng: hit.lng,
     });

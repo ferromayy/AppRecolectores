@@ -5,7 +5,7 @@ Documentación de onboarding técnico para quien se sume al proyecto. Cubre stac
 **Producción:** https://app-recolectores.vercel.app  
 **Manual de uso (no técnico):** [MANUAL_USUARIO.md](./MANUAL_USUARIO.md)
 
-**Cambios recientes (jun 2026):** Operativo / Historial / KPIs / Parámetros; estado `cerrada` y cierre operario; reactivar; export CSV; columnas `unidad` y `tipo_servicio` en tablas; reglas de cobro Empresa / Mixto / estándar; cuatro claves en `sistema_precio_historial`; API genérica `/api/panel/parametros/[clave]`.
+**Cambios recientes (jun 2026):** Operativo / Historial / KPIs / Parámetros; cierre operario y reactivar; tablas operario con insumos, materiales y recaudación; **Ver detalle** de ruta (desglose exitosas/pendientes/canceladas por unidad × tipo de cliente) y de recolección (retiro + cobro); Maps recolector con todas las paradas abiertas en orden; WhatsApp **Avisar**; reglas de cobro Empresa / Mixto / estándar; script `clear-rutas-recolecciones.mjs`; API `/api/panel/parametros/[clave]`.
 
 ---
 
@@ -315,10 +315,14 @@ Componentes en `src/components/panel/operario/`:
 | Componente | Función |
 |------------|---------|
 | `operario-dashboard.tsx` | Orquestador Operativo / Historial; cierre operario, export historial |
-| `operario-rutas-table.tsx` | Tabla Operativo (Suspender, Reactivar, Cierre operario) |
-| `operario-historial-rutas-table.tsx` | Tabla Historial (columnas ampliadas, insumos) |
-| `operario-recolecciones-table.tsx` | Paradas en Operativo (editable; columnas `unidad`, `tipo_servicio`) |
-| `operario-historial-recolecciones-table.tsx` | Paradas en Historial (incl. `unidad`, `tipo_servicio` tras hora real) |
+| `operario-rutas-table.tsx` | Tabla Operativo: puntos, exitosas, bolsas/biotachos, montos, insumos, **Ver detalle** |
+| `operario-historial-rutas-table.tsx` | Tabla Historial (columnas ampliadas, insumos, export) |
+| `operario-ruta-preparacion-insumos-modal.tsx` | Formulario obligatorio de insumos del operario (bloquea inicio del recolector) |
+| `insumos-lista-editor.tsx` | Editor reutilizable de lista de insumos (operario + recolector) |
+| `operario-ruta-detalle.tsx` | Contenido del modal de ruta (recaudación + desglose por unidad/tipo) |
+| `operario-recolecciones-table.tsx` | Paradas en Operativo; botón **Ver detalle** por fila |
+| `operario-recoleccion-detalle-modal.tsx` | Popup retiro (bolsas/biotachos) + recaudación (efectivo/transferencia/QR) |
+| `operario-historial-recolecciones-table.tsx` | Paradas en Historial (columnas ampliadas; sin modal de detalle unificado) |
 | `operario-cliente-detalle-modal.tsx` | Popup datos del cliente desde Historial |
 | `operario-ruta-map-modal.tsx` | Mapa + drag-and-drop reorder |
 | `operario-ruta-detalle-modal.tsx` | Detalle + suspender/reactivar |
@@ -333,6 +337,10 @@ Componentes en `src/components/panel/operario/`:
 Datos:
 
 - `src/lib/data/operario-dashboard.ts` — Operativo / Historial (~200 rutas por vista)
+- `src/lib/domain/operario-dashboard.ts` — filas de tabla, agregados de ruta y helpers de detalle:
+  - `buildRutaOperarioRows()` — suma bolsas/biotachos visitadas, `monto_a_recaudar`, `total_recaudado` (efectivo + transferencia + QR)
+  - `buildRutaDetalle()` + `buildRecoleccionesPorUnidadTipo()` — desglose exitosas / pendientes / canceladas por `(unidad, tipo_servicio)`
+  - `buildRecoleccionOperarioDetalleCarga()` — retiro y cobro para modal de parada
 - `src/lib/data/operario-kpis.ts` — KPIs: rutas por `fecha` en rango, `.limit(5000)` + recolecciones de esas rutas
 
 Dominio KPI: `src/lib/domain/operario-kpis.ts` (`resolveKpiFiltroFechas`, `buildOperarioKpis`, constante `KPI_LABEL_SERVICIOS` = `"Recolecciones (servicios)"`).
@@ -344,6 +352,56 @@ Exportación CSV (cliente):
 - `src/lib/domain/operario-historial-export.ts` — rutas + recolecciones del historial
 
 Navegación staff: `panel-shell.tsx` — enlaces Operativo, KPIs, Historial, Parámetros, Usuarios. Middleware permite `/panel/historial` y `/panel/kpis` solo a staff.
+
+#### Detalle de ruta (modal **Ver detalle**)
+
+Archivos: `operario-ruta-detalle-modal.tsx` → `operario-ruta-detalle.tsx`; datos vía `buildRutaDetalle(ruta, recoleccionesDeLaRuta)`.
+
+Secciones del popup:
+
+1. Datos generales (fecha, turno, recolector, estado)
+2. **Recolecciones exitosas** — total + filas `Unidad · Tipo de cliente → cantidad` (solo `visitada`)
+3. **Recolecciones pendientes** — idem (`pendiente`, `en_camino`)
+4. **Recolecciones canceladas** — idem (`cancelada`, `omitida`)
+5. **Recaudación** — monto a recaudar, efectivo, transferencia, QR, total
+
+Agrupación: `buildRecoleccionesPorUnidadTipo()` con clave `(unidad.trim() || "Sin unidad", tipo_servicio.trim() || "Sin tipo")`. Orden: mayor cantidad primero.
+
+Acciones en el mismo modal (según estado): **Suspender ruta** / **Reactivar ruta**.
+
+#### Detalle de recolección (modal **Ver detalle** en tabla de paradas)
+
+Solo en **Operativo** (`operario-recolecciones-table.tsx`). Estado local del modal en la tabla; no pasa por `operario-dashboard.tsx`.
+
+- Botón habilitado si la parada está **visitada** o **cancelada** (`buildRecoleccionOperarioDetalleCarga().tieneCarga`)
+- **Visitada:** bloques **Retiro** (bolsas llenas/nuevas, biotachos llenos/nuevos) y **Recaudación** (efectivo, transferencia, QR)
+- **Cancelada:** motivo de cancelación
+- **Pendiente / en camino:** botón deshabilitado
+
+Helpers de formato: `formatCantidadBolsasDetalle`, `formatCantidadBiotachosDetalle`, `formatMoney`.
+
+#### Preparación de insumos (operario → recolector)
+
+Columnas en `rutas`: `insumos_operario` (JSONB), `insumos_operario_at`.
+
+- **API:** `POST /api/panel/rutas/[id]/insumos-operario` — staff; valida con `parseInsumosOperarioBody`; no editable si la ruta ya inició
+- **Bloqueo recolector:** `insumosOperarioCompletados()` en `buildRecolectorRutaDetalle`, página `/iniciar` y `POST .../iniciar`
+- **UI operario:** columna **Preparación** en `operario-rutas-table.tsx` → `operario-ruta-preparacion-insumos-modal.tsx`
+- **UI recolector:** `Insumos asignados` en `recolector-ruta-detalle.tsx` cuando hay preparación guardada
+
+Mismos tipos que inicio de jornada: `INSUMO_TIPOS` en `ruta-insumos.ts`.
+
+#### Columnas agregadas en tabla de rutas (Operativo)
+
+Calculadas en `buildRutaOperarioRows()` desde paradas **visitadas**:
+
+| Columna UI | Campo / lógica |
+|------------|----------------|
+| Bolsas recolectadas | Suma `bolsas_llenas + bolsas_nuevas`; tooltip con detalle llenas/nuevas |
+| Biotachos | Suma `biotachos_llenos + biotachos_nuevos`; tooltip |
+| Monto a recaudar | Suma `precio_total` visitadas |
+| Total recaudado | Suma efectivo + transferencia + QR visitadas (no solo efectivo de cierre de ruta) |
+| Ver insumos | `ruta.insumos_detalle` al iniciar jornada |
 
 ### Parámetros de sistema
 

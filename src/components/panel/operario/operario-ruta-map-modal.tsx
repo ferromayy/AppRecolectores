@@ -315,6 +315,7 @@ export function OperarioRutaMapModal({
               nombre: punto.nombre,
               direccion: punto.direccion,
               zona: punto.zona,
+              horaProgramada: "—",
               lat: punto.lat,
               lng: punto.lng,
             })) ??

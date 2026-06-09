@@ -4,12 +4,8 @@ import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useState } from "react";
 
-import {
-  INSUMO_TIPOS,
-  MAX_INSUMOS_INICIO,
-  type InsumoInicio,
-  type InsumoTipo,
-} from "@/lib/domain/ruta-insumos";
+import { InsumosListaEditor } from "@/components/panel/insumos-lista-editor";
+import { type InsumoInicio } from "@/lib/domain/ruta-insumos";
 
 type Props = {
   rutaId: string;
@@ -19,33 +15,9 @@ type Props = {
 export function RecolectorInicioRutaForm({ rutaId, rutaNombre }: Props) {
   const router = useRouter();
   const [kmInicial, setKmInicial] = useState("");
-  const [insumoTipo, setInsumoTipo] = useState<InsumoTipo>(INSUMO_TIPOS[0]);
-  const [insumoCantidad, setInsumoCantidad] = useState("1");
   const [insumos, setInsumos] = useState<InsumoInicio[]>([]);
   const [error, setError] = useState<string | null>(null);
   const [saving, setSaving] = useState(false);
-
-  function handleAgregarInsumo() {
-    setError(null);
-
-    const cantidad = Number.parseInt(insumoCantidad, 10);
-    if (!Number.isInteger(cantidad) || cantidad <= 0) {
-      setError("La cantidad debe ser un número entero mayor a cero");
-      return;
-    }
-
-    if (insumos.length >= MAX_INSUMOS_INICIO) {
-      setError(`Máximo ${MAX_INSUMOS_INICIO} insumos`);
-      return;
-    }
-
-    setInsumos((prev) => [...prev, { tipo: insumoTipo, cantidad }]);
-    setInsumoCantidad("1");
-  }
-
-  function handleQuitarInsumo(index: number) {
-    setInsumos((prev) => prev.filter((_, i) => i !== index));
-  }
 
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
@@ -136,75 +108,7 @@ export function RecolectorInicioRutaForm({ rutaId, rutaNombre }: Props) {
         </div>
 
         <div className="rounded-2xl border border-zinc-200 bg-white p-4 dark:border-zinc-800 dark:bg-zinc-900">
-          <div className="flex items-center justify-between gap-3">
-            <h2 className="text-sm font-semibold text-zinc-900 dark:text-zinc-50">
-              Insumos *
-            </h2>
-            <span className="text-xs text-zinc-500">
-              {insumos.length}/{MAX_INSUMOS_INICIO}
-            </span>
-          </div>
-
-          <div className="mt-3 grid grid-cols-1 gap-3 sm:grid-cols-[1fr_5rem_auto]">
-            <select
-              value={insumoTipo}
-              onChange={(e) => setInsumoTipo(e.target.value as InsumoTipo)}
-              className="min-h-[3rem] rounded-xl border border-zinc-200 bg-white px-3 text-base text-zinc-900 outline-none focus:border-emerald-500 dark:border-zinc-700 dark:bg-zinc-950 dark:text-zinc-50"
-            >
-              {INSUMO_TIPOS.map((tipo) => (
-                <option key={tipo} value={tipo}>
-                  {tipo}
-                </option>
-              ))}
-            </select>
-            <input
-              type="number"
-              inputMode="numeric"
-              min="1"
-              step="1"
-              value={insumoCantidad}
-              onChange={(e) => setInsumoCantidad(e.target.value)}
-              aria-label="Cantidad"
-              className="min-h-[3rem] rounded-xl border border-zinc-200 bg-white px-3 text-center text-base text-zinc-900 outline-none focus:border-emerald-500 dark:border-zinc-700 dark:bg-zinc-950 dark:text-zinc-50"
-            />
-            <button
-              type="button"
-              onClick={handleAgregarInsumo}
-              disabled={insumos.length >= MAX_INSUMOS_INICIO}
-              className="min-h-[3rem] rounded-xl border border-emerald-200 bg-emerald-50 px-4 text-sm font-semibold text-emerald-800 active:bg-emerald-100 disabled:opacity-50 dark:border-emerald-900 dark:bg-emerald-950 dark:text-emerald-300"
-            >
-              Agregar
-            </button>
-          </div>
-
-          {insumos.length === 0 ? (
-            <p className="mt-4 rounded-xl border border-dashed border-zinc-300 p-4 text-center text-sm text-zinc-500 dark:border-zinc-700">
-              Todavía no agregaste insumos.
-            </p>
-          ) : (
-            <ul className="mt-4 space-y-2">
-              {insumos.map((item, index) => (
-                <li
-                  key={`${item.tipo}-${index}`}
-                  className="flex items-center justify-between gap-3 rounded-xl bg-zinc-50 px-3 py-2.5 dark:bg-zinc-800/60"
-                >
-                  <div className="min-w-0">
-                    <p className="truncate text-sm font-medium text-zinc-900 dark:text-zinc-50">
-                      {item.tipo}
-                    </p>
-                    <p className="text-xs text-zinc-500">Cantidad: {item.cantidad}</p>
-                  </div>
-                  <button
-                    type="button"
-                    onClick={() => handleQuitarInsumo(index)}
-                    className="shrink-0 rounded-lg px-2 py-1 text-xs font-medium text-red-700 active:bg-red-50 dark:text-red-400 dark:active:bg-red-950/40"
-                  >
-                    Quitar
-                  </button>
-                </li>
-              ))}
-            </ul>
-          )}
+          <InsumosListaEditor insumos={insumos} onChange={setInsumos} disabled={saving} />
         </div>
 
         <button

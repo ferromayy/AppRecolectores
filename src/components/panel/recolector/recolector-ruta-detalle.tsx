@@ -166,6 +166,12 @@ export function RecolectorRutaDetalle({
         </p>
       )}
 
+      {!ruta.rutaIniciada && !ruta.rutaSuspendida && !ruta.preparacionInsumosCompleta && (
+        <p className="rounded-2xl border border-amber-200 bg-amber-50 p-4 text-sm text-amber-900 dark:border-amber-900 dark:bg-amber-950/40 dark:text-amber-200">
+          El operario debe completar la preparación de insumos antes de que puedas iniciar la ruta.
+        </p>
+      )}
+
       <div className="rounded-2xl border border-zinc-200 bg-white p-5 dark:border-zinc-800 dark:bg-zinc-900">
         <p className="text-xs font-medium uppercase tracking-wider text-emerald-700 dark:text-emerald-400">
           Detalle de ruta
@@ -224,6 +230,9 @@ export function RecolectorRutaDetalle({
               value={formatRecolectorMoney(ruta.totalEfectivo)}
             />
           )}
+          {ruta.preparacionInsumosCompleta && (
+            <DetailRow label="Insumos asignados" value={ruta.insumosOperarioResumen} />
+          )}
           {ruta.rutaIniciada && (
             <>
               <DetailRow
@@ -232,7 +241,7 @@ export function RecolectorRutaDetalle({
                 suppressHydrationWarning
               />
               <DetailRow label="Km iniciales" value={formatKm(ruta.kmInicial)} />
-              <DetailRow label="Insumos" value={ruta.insumosResumen} />
+              <DetailRow label="Insumos declarados" value={ruta.insumosResumen} />
             </>
           )}
         </dl>
@@ -260,6 +269,8 @@ export function RecolectorRutaDetalle({
           >
             {ruta.rutaSuspendida
               ? "Ruta suspendida"
+              : !ruta.preparacionInsumosCompleta
+                ? "Falta preparación"
               : ruta.rutaIniciada
                 ? "Ruta iniciada"
                 : "Inicio de ruta"}

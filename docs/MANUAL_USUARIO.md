@@ -2,6 +2,8 @@
 
 Guía para usuarios de la app **sin conocimientos de programación**. Explica qué puede hacer cada rol y cómo usar las pantallas del día a día.
 
+**¿Sos del equipo técnico?** Leé [GUIA_DESARROLLADORES.md](./GUIA_DESARROLLADORES.md).
+
 **App en producción:** https://app-recolectores.vercel.app
 
 ---
@@ -16,7 +18,7 @@ Guía para usuarios de la app **sin conocimientos de programación**. Explica qu
 6. [Planilla Google Sheets](#6-planilla-google-sheets)
 7. [Problemas frecuentes](#7-problemas-frecuentes)
 
-**Novedades recientes (junio 2026):** menús **Operativo**, **Historial**, **KPIs** y **Parámetros**; estado **Cerrada** y **Cierre operario**; **Reactivar** en Operativo; exportación **CSV**; tablas con **Unidad** y **Tipo de servicio**; reglas de cobro por **Empresa** / **Mixto** / estándar; cuatro precios configurables en Parámetros (bolsa extra, retiro mixto, bolsa punto, bolsa llena punto).
+**Novedades recientes (junio 2026):** menús **Operativo**, **Historial**, **KPIs** y **Parámetros**; **Cierre operario** y **Reactivar**; tabla de rutas con **insumos**, **bolsas/biotachos**, **montos**; **Ver detalle** de ruta (desglose por unidad y tipo de cliente) y de cada parada (retiro + cobro); recolector: **Maps** (ruta y parada), **Avisar** por WhatsApp; reglas de cobro **Empresa** / **Mixto** / estándar.
 
 ---
 
@@ -155,44 +157,88 @@ Panel de métricas agregadas según el **período** elegido. Solo lectura.
 
 ### 3.5 Tabla de rutas (Operativo)
 
-Lista las rutas del contexto actual (operativas o historial). Cada fila muestra, entre otros datos:
+Lista las rutas del contexto actual. Cada fila incluye, entre otros:
 
-- Fecha y turno (Mañana / Tarde)
-- Recolector asignado
-- Estado (Pendiente, En proceso, Realizado, Suspendida…)
-- Cantidad de paradas
-- Kilómetros, inicio/cierre de jornada, total recaudado
+| Columna | Qué muestra |
+|---------|-------------|
+| Fecha, Recolector, Estado, Turno | Identificación de la jornada |
+| **Puntos** | Cantidad total de paradas |
+| **Exitosas** | Paradas visitadas |
+| **Bolsas recolectadas** | Total de bolsas (llenas + nuevas) en paradas visitadas; pasá el mouse para ver el detalle |
+| **Biotachos** | Total de biotachos (llenos + nuevos) en visitadas; tooltip con detalle |
+| Km, Inicio jornada | Kilometraje e inicio del recolector |
+| **Ver insumos** | Popup con lo que declaró el recolector al iniciar (bolsas, kit, cestos, biotachos, ropa, celular) |
+| **Preparación** | Formulario obligatorio del operario antes del inicio (mismos tipos de insumo que el recolector). **Completar** (ámbar) hasta guardar; **Ver prep.** (verde) cuando ya está listo |
+| Cierre recolector / operario | Fechas de cierre |
+| **Monto a recaudar** | Suma de precios cargados en paradas visitadas |
+| **Total recaudado** | Efectivo + transferencia + QR de paradas visitadas |
+| Observaciones | Notas del operario |
 
 **Acciones por ruta:**
 
 | Botón | Qué hace |
 |-------|----------|
 | Seleccionar fila | Muestra sus recolecciones abajo |
-| **Ver detalle** | Resumen completo de la ruta (incluye **Suspender** o **Reactivar** según el estado) |
+| **Ver detalle** | Popup con resumen, **desglose de paradas** y **recaudación** (ver abajo) |
 | **Ver mapa** | Mapa con direcciones geocodificadas |
-| **Editar** | Cambiar nombre, fecha, turno, estado, recolector, observaciones (solo en Operativo) |
-| **Suspender** | Pausa la ruta (solo en Operativo, rutas activas) |
-| **Reactivar** | Reabre una ruta **Realizado** (sin cierre operario) o **Suspendida** → **En proceso** (solo en Operativo) |
-| **Cierre operario** | Pasa una ruta **Realizado** a **Cerrada** y la mueve al Historial (doble confirmación) |
-| **Eliminar** | Borra la ruta y todas sus paradas (acción irreversible) |
+| **Ver insumos** | Insumos de inicio de jornada |
+| **Editar** | Cambiar nombre, fecha, turno, estado, recolector, observaciones |
+| **Suspender** | Pausa la ruta (solo rutas activas) |
+| **Reactivar** | Reabre una ruta **Realizado** o **Suspendida** → **En proceso** |
+| **Cierre operario** | Pasa una ruta **Realizado** a **Cerrada** (Historial) |
+| **Eliminar** | Borra la ruta y todas sus paradas |
 
 > En **Historial** no aparecen Editar, Suspender, Reactivar ni Cierre operario.
 
-#### Tabla **Recolecciones (servicios)** (Operativo e Historial)
+#### Ver detalle de una ruta (popup)
+
+Al tocar **Ver detalle** en la tabla de rutas:
+
+1. **Datos generales** — fecha, turno, recolector, estado
+2. **Recolecciones exitosas** — total y, debajo, cuántas hay de cada combinación **Unidad · Tipo de cliente** (ej. Hogar · Orgánico: 3)
+3. **Recolecciones pendientes** — mismo desglose (paradas aún no hechas o en camino)
+4. **Recolecciones canceladas** — mismo desglose (canceladas u omitidas)
+5. **Recaudación** — monto a recaudar, efectivo, transferencia, QR y total
+
+Desde el mismo popup podés **Suspender** o **Reactivar** la ruta si corresponde.
+
+#### Preparación de insumos (operario, obligatoria)
+
+Antes de que el recolector pueda **Inicio de ruta**, el operario debe:
+
+1. Tocar **Completar** en la columna **Preparación** de la ruta
+2. Agregar insumos (mismo desplegable que al iniciar: Cesto, Biotacho, KitPuntos, Ropa, Celular, Bolsa punto, Bolsa nueva, Biotachos nuevos)
+3. Tocar **Guardar preparación**
+
+Hasta que no se guarde, el recolector ve un aviso y el botón **Inicio de ruta** queda deshabilitado. Una vez guardada, en el detalle de ruta del recolector aparece **Insumos asignados** con el listado.
+
+Podés editar la preparación mientras la ruta no haya sido iniciada por el recolector.
+
+#### Tabla **Recolecciones (servicios)** (Operativo)
 
 Muestra las paradas de la **ruta seleccionada** arriba.
 
-**Operativo** — columnas principales: #, Estado, Zona, Dirección, Horario prog., Nombre, Hora real, **Unidad**, **Tipo de servicio** (en UI puede figurar como tipo de cliente), Precio total, montos, observaciones, firma, **Editar**.
+**Columnas principales:** #, Estado, **Detalle**, Zona, Dirección, Horario prog., Nombre, Hora real, Unidad, Tipo de cliente, Precio total, Observaciones, Firma, Firmante, **Editar**.
 
-**Historial** — misma información ampliada; en Operativo podés **Editar**, **Agregar** o **Eliminar** (si la ruta lo permite).
+**Ver detalle (por parada):** botón en la columna **Detalle** (tercera columna). Abrí el popup para ver:
+
+- **Retiro:** bolsas (llenas/nuevas) y biotachos (llenos/nuevos)
+- **Recaudación:** efectivo, transferencia y QR
+
+Si la parada está **pendiente**, el botón aparece deshabilitado (gris) hasta que el recolector la visite o cancele. Si está **cancelada**, el popup muestra el motivo.
+
+> En **Historial** la tabla de paradas sigue mostrando bolsas, biotachos y montos en columnas separadas (no usa este popup).
 
 | Acción (Operativo) | Qué hace |
 |--------------------|----------|
-| **Editar** | Modificar datos de la parada (dirección, hora, precio, unidad, tipo de servicio, etc.) |
+| **Ver detalle** | Retiro y cobro de la parada (si ya fue visitada o cancelada) |
+| **Editar** | Modificar datos de la parada |
 | **+ Agregar recolección** | Agregar una parada manual (no si la ruta está Realizada o Cerrada) |
 | **Eliminar** | Quitar una parada |
 
 Los campos **Unidad** y **Tipo de servicio** vienen de la planilla o del alta manual; definen, entre otras cosas, **cómo se calcula el cobro** en campo (ver § 5.5).
+
+> **Antes:** las columnas Bolsas, Biotachos, Efectivo y Transferencia estaban sueltas en Operativo; ahora van dentro de **Ver detalle** para dejar la tabla más legible.
 
 ### 3.6 Cierre operario
 
@@ -209,7 +255,7 @@ Hasta ese momento la ruta sigue en Operativo aunque el recolector ya no pueda ed
 1. Seleccioná una ruta
 2. Tocá **Ver mapa**
 3. La app geocodifica direcciones que aún no tienen coordenadas (puede tardar unos segundos)
-4. En el panel lateral podés **arrastrar** las paradas para cambiar el orden de visita
+4. En el panel lateral podés **arrastrar** las paradas para cambiar el orden de visita. Cada fila muestra la **hora programada** (ej. 09:30) junto al nombre del cliente.
 5. Al soltar, el nuevo orden se **guarda automáticamente**
 
 Los marcadores se colorean por **zona** cuando está disponible.
@@ -305,16 +351,18 @@ El operario usa el **mismo panel operativo** que el superadmin para seguir rutas
 
 ### 4.1 Día a día
 
-1. **Ingresá** al panel operativo
-2. Revisá la tabla de **Rutas** — filtrá mentalmente por fecha/recolector
-3. **Seleccioná una ruta** para ver sus recolecciones
-4. Si hace falta corregir datos → **Editar** ruta o recolección
-5. Para planificar el recorrido → **Ver mapa** y reordenar paradas
-6. Seguí el avance: estados de ruta y de cada parada se actualizan cuando el recolector carga en campo
-7. Rutas **Realizadas** → **Cierre operario** cuando corresponda
-8. Si hace falta pausar o reabrir → **Suspender** / **Reactivar** en Operativo
-9. Consultá **Historial** o **KPIs** para reportes; exportá CSV si necesitás Excel
-10. Revisá **Parámetros** cuando cambien precios (bolsa extra, retiro mixto, etc.)
+1. **Ingresá** al panel operativo (`/panel` → menú **Operativo**)
+2. Revisá la tabla de **Rutas** — fecha, recolector, exitosas, bolsas, montos
+3. **Seleccioná una ruta** para ver sus recolecciones abajo
+4. **Ver detalle** (ruta): desglose de exitosas/pendientes/canceladas por unidad y tipo de cliente + recaudación
+5. **Ver detalle** (parada): retiro y cobro de cada servicio visitado
+6. Si hace falta corregir datos → **Editar** ruta o recolección
+7. Para planificar el recorrido → **Ver mapa** y reordenar paradas
+8. Seguí el avance cuando el recolector carga en campo
+9. Rutas **Realizadas** → **Cierre operario** cuando corresponda
+10. **Suspender** / **Reactivar** si hace falta pausar o reabrir
+11. **Historial** o **KPIs** para reportes; exportá CSV si necesitás Excel
+12. **Parámetros** cuando cambien precios
 
 ### 4.2 Historial y KPIs
 
@@ -409,6 +457,8 @@ Dentro de cada sección, las rutas se ordenan por fecha (más recientes arriba).
 Si la ruta está **Suspendida**, verás un aviso y no podrás operarla hasta que el operario la reactive.
 
 ### 5.3 Iniciar la ruta (obligatorio antes de cargar paradas)
+
+**Requisito previo:** el operario debe haber completado la **Preparación de insumos** en el panel operativo. Si falta, verás un aviso y **Inicio de ruta** estará deshabilitado; en el detalle aparecerán los **Insumos asignados** cuando el operario los cargue.
 
 1. En el detalle, tocá **Inicio de ruta**
 2. Completá:
@@ -658,6 +708,17 @@ Documentación técnica de la integración: [SHEETS_INTEGRATION.md](./SHEETS_INT
 - ¿La ruta está **suspendida**? Avisá al operario
 - Revisá que la suma de pagos **no sea menor** al total (puede ser mayor)
 - Si cancelás, solo necesitás motivo + firmante + firma
+
+### No veo retiro ni cobro en una parada (operario)
+
+- En **Operativo**, usá el botón **Ver detalle** en la columna **Detalle** (no confundir con **Ver detalle** de la ruta)
+- El botón solo se habilita cuando la parada está **Visitada** o **Cancelada**
+- Si está **Pendiente**, el recolector aún no cargó la parada
+
+### Maps me salta paradas que no visité (recolector)
+
+- El recorrido incluye **todas** las paradas abiertas en el **orden de la ruta**, aunque hayas visitado otras más adelante
+- Si falta una parada, recargá el detalle de la ruta (la lista se arma al abrir la pantalla)
 
 ### El mapa del operario no carga
 

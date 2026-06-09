@@ -14,9 +14,17 @@ export type MapaRecoleccionItem = {
   nombre: string;
   direccion: string;
   zona: string | null;
+  horaProgramada: string;
   lat: number | null;
   lng: number | null;
 };
+
+export function formatHoraProgramadaMapa(hora: string | null | undefined): string {
+  if (!hora) return "—";
+  const text = String(hora).trim();
+  if (!text) return "—";
+  return text.slice(0, 5);
+}
 
 export function toMapaPuntos(items: MapaRecoleccionItem[]): MapaPunto[] {
   return items

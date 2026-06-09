@@ -15,6 +15,11 @@ import {
   type InsumosHistorialDetalle,
 } from "@/lib/domain/operario-historial-ruta";
 import { getInicioJornadaAt } from "@/lib/domain/recolector-ruta";
+import {
+  insumosOperarioCompletados,
+  parseInsumosFromJson,
+  type InsumoInicio,
+} from "@/lib/domain/ruta-insumos";
 import { formatRutaEstado, formatRutaFecha } from "@/lib/domain/rutas";
 
 export type RecolectorOption = {
@@ -57,6 +62,10 @@ export type RutaOperarioRow = {
   biotachos_recolectados: number;
   bolsas_recolectadas_detalle: string | null;
   biotachos_recolectados_detalle: string | null;
+  insumos_operario: InsumoInicio[];
+  insumos_operario_completado: boolean;
+  insumos_operario_at: string | null;
+  puede_editar_insumos_operario: boolean;
 };
 
 export type RecoleccionOperarioRow = {
@@ -246,6 +255,8 @@ export function buildRutaOperarioRows(
       materiales.biotachosLlenos + materiales.biotachosNuevos;
 
     const inicioJornadaAt = getInicioJornadaAt(ruta);
+    const rutaIniciada = inicioJornadaAt != null || ruta.estado === "en_curso";
+    const insumos_operario = parseInsumosFromJson(ruta.insumos_operario);
 
     return {
       id: ruta.id,
@@ -294,6 +305,14 @@ export function buildRutaOperarioRows(
         materiales.biotachosLlenos,
         materiales.biotachosNuevos,
       ),
+      insumos_operario,
+      insumos_operario_completado: insumosOperarioCompletados(ruta.insumos_operario),
+      insumos_operario_at: ruta.insumos_operario_at,
+      puede_editar_insumos_operario:
+        !rutaIniciada &&
+        ruta.estado !== "completada" &&
+        ruta.estado !== "cerrada" &&
+        ruta.estado !== "cancelada",
     };
   });
 }

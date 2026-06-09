@@ -4,6 +4,7 @@ import { useRouter } from "next/navigation";
 import { useMemo, useState } from "react";
 
 import { OperarioHistorialRutasTable } from "@/components/panel/operario/operario-historial-rutas-table";
+import { OperarioRutaPreparacionInsumosModal } from "@/components/panel/operario/operario-ruta-preparacion-insumos-modal";
 import { OperarioRutaInsumosModal } from "@/components/panel/operario/operario-ruta-insumos-modal";
 import { OperarioRecoleccionFormModal } from "@/components/panel/operario/operario-recoleccion-form-modal";
 import { OperarioHistorialRecoleccionesTable } from "@/components/panel/operario/operario-historial-recolecciones-table";
@@ -52,6 +53,7 @@ export function OperarioDashboard({
   const [suspenderRutaId, setSuspenderRutaId] = useState<string | null>(null);
   const [reactivarRutaId, setReactivarRutaId] = useState<string | null>(null);
   const [insumosRutaId, setInsumosRutaId] = useState<string | null>(null);
+  const [preparacionInsumosRutaId, setPreparacionInsumosRutaId] = useState<string | null>(null);
   const [cierreOperarioRutaId, setCierreOperarioRutaId] = useState<string | null>(null);
   const [cierreOperarioPaso, setCierreOperarioPaso] = useState<1 | 2>(1);
   const [suspendiendo, setSuspendiendo] = useState(false);
@@ -66,6 +68,7 @@ export function OperarioDashboard({
   const rutaAReactivar = rutas.find((r) => r.id === reactivarRutaId) ?? null;
   const rutaACierreOperario = rutas.find((r) => r.id === cierreOperarioRutaId) ?? null;
   const rutaInsumos = rutas.find((r) => r.id === insumosRutaId) ?? null;
+  const rutaPreparacionInsumos = rutas.find((r) => r.id === preparacionInsumosRutaId) ?? null;
   const mapaRuta = rutas.find((r) => r.id === mapaRutaId) ?? null;
   const editRuta = rutas.find((r) => r.id === editRutaId) ?? null;
   const editRecoleccion = recolecciones.find((r) => r.id === editRecoleccionId) ?? null;
@@ -233,6 +236,7 @@ export function OperarioDashboard({
               setSelectedRutaId(id);
             }}
             onVerInsumos={setInsumosRutaId}
+            onPrepararInsumos={setPreparacionInsumosRutaId}
             onEditar={setEditRutaId}
             onSuspender={setSuspenderRutaId}
             onCierreOperario={abrirCierreOperario}
@@ -296,6 +300,13 @@ export function OperarioDashboard({
           />
         )}
       </section>
+
+      <OperarioRutaPreparacionInsumosModal
+        open={preparacionInsumosRutaId !== null}
+        ruta={rutaPreparacionInsumos}
+        onClose={() => setPreparacionInsumosRutaId(null)}
+        onSaved={refreshData}
+      />
 
       <OperarioRutaInsumosModal
         open={insumosRutaId !== null}

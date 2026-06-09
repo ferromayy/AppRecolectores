@@ -22,6 +22,7 @@ const MIGRATION_FILES = [
   "20260601120000_ruta_estado_terminada.sql",
   "20260602120000_ruta_estado_terminada_a_cerrada.sql",
   "20260603120000_recoleccion_empresa_punto_campos.sql",
+  "20260604120000_rutas_insumos_operario.sql",
 ];
 
 function loadEnv() {

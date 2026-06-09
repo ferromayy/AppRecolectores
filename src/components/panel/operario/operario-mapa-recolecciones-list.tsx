@@ -51,7 +51,7 @@ export function OperarioMapaRecoleccionesList({
       <div className="border-b border-zinc-200 px-4 py-3 dark:border-zinc-800">
         <p className="text-sm font-medium text-zinc-900 dark:text-zinc-50">Orden de recolección</p>
         <p className="mt-0.5 text-xs text-zinc-500">
-          Arrastrá las filas para definir el recorrido. Los números del mapa se actualizan al instante.
+          Arrastrá las filas para definir el recorrido. La hora programada ayuda a ordenar la ruta.
         </p>
         {saving && <p className="mt-2 text-xs text-emerald-700 dark:text-emerald-400">Guardando orden…</p>}
         {saveError && <p className="mt-2 text-xs text-red-600 dark:text-red-400">{saveError}</p>}
@@ -103,7 +103,15 @@ export function OperarioMapaRecoleccionesList({
                 {item.orden}
               </span>
               <div className="min-w-0 flex-1">
-                <p className="truncate font-medium text-zinc-900 dark:text-zinc-50">{item.nombre}</p>
+                <div className="flex items-center gap-2">
+                  <span
+                    className="shrink-0 rounded-md bg-zinc-100 px-1.5 py-0.5 font-mono text-xs font-semibold text-zinc-800 dark:bg-zinc-800 dark:text-zinc-100"
+                    title="Horario programado"
+                  >
+                    {item.horaProgramada}
+                  </span>
+                  <p className="truncate font-medium text-zinc-900 dark:text-zinc-50">{item.nombre}</p>
+                </div>
                 <p className="truncate text-xs text-zinc-500" title={item.direccion}>
                   {item.direccion}
                 </p>

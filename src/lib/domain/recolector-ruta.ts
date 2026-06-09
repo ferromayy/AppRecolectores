@@ -1,4 +1,4 @@
-import { formatInsumosResumen, type InsumoInicio } from "@/lib/domain/ruta-insumos";
+import { formatInsumosResumen, insumosOperarioCompletados, parseInsumosFromJson, type InsumoInicio } from "@/lib/domain/ruta-insumos";
 import {
   RECOLECCION_OPERATIVA_LABELS,
   RUTA_TURNO_LABELS,
@@ -35,6 +35,9 @@ export type RecolectorRutaDetalle = {
   kmInicial: number | null;
   insumosInicio: InsumoInicio[];
   insumosResumen: string;
+  insumosOperario: InsumoInicio[];
+  insumosOperarioResumen: string;
+  preparacionInsumosCompleta: boolean;
   montoARecaudar: number;
   recaudadoEfectivo: number;
   recaudadoTransferencia: number;
@@ -84,21 +87,6 @@ function num(value: number | string | null | undefined): number {
   if (value === null || value === undefined || value === "") return 0;
   const n = typeof value === "number" ? value : Number(value);
   return Number.isFinite(n) ? n : 0;
-}
-
-function parseInsumosInicio(value: unknown): InsumoInicio[] {
-  if (!Array.isArray(value)) return [];
-  const result: InsumoInicio[] = [];
-  for (const item of value) {
-    if (!item || typeof item !== "object") continue;
-    const row = item as Record<string, unknown>;
-    const tipo = String(row.tipo ?? "");
-    const cantidad = num(row.cantidad as string | number | null | undefined);
-    if (tipo && cantidad > 0) {
-      result.push({ tipo: tipo as InsumoInicio["tipo"], cantidad: Math.round(cantidad) });
-    }
-  }
-  return result;
 }
 
 export function formatKm(value: number | null | undefined): string {
@@ -161,14 +149,17 @@ export function buildRecolectorRutaDetalle(
   const inicioJornadaAt = getInicioJornadaAt(ruta);
   const rutaIniciada = inicioJornadaAt != null || ruta.estado === "en_curso";
   const rutaSuspendida = ruta.estado === "suspendida";
+  const preparacionInsumosCompleta = insumosOperarioCompletados(ruta.insumos_operario);
   const puedeIniciar =
     !rutaIniciada &&
     !rutaSuspendida &&
     ruta.estado !== "completada" &&
     ruta.estado !== "cerrada" &&
-    ruta.estado !== "cancelada";
+    ruta.estado !== "cancelada" &&
+    preparacionInsumosCompleta;
 
-  const insumosInicio = parseInsumosInicio(ruta.insumos_inicio);
+  const insumosInicio = parseInsumosFromJson(ruta.insumos_inicio);
+  const insumosOperario = parseInsumosFromJson(ruta.insumos_operario);
   const rutaFinalizada = ruta.estado === "completada" || ruta.estado === "cerrada";
   const finalizar = evaluarFinalizarRuta(recolecciones, ruta.estado, rutaIniciada);
 
@@ -185,6 +176,9 @@ export function buildRecolectorRutaDetalle(
     kmInicial: ruta.km_inicial != null ? num(ruta.km_inicial) : null,
     insumosInicio,
     insumosResumen: formatInsumosResumen(insumosInicio),
+    insumosOperario,
+    insumosOperarioResumen: formatInsumosResumen(insumosOperario),
+    preparacionInsumosCompleta,
     montoARecaudar: recaudo.montoARecaudar,
     recaudadoEfectivo: recaudo.recaudadoEfectivo,
     recaudadoTransferencia: recaudo.recaudadoTransferencia,
